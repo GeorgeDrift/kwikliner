@@ -216,7 +216,8 @@ const Home: React.FC<HomeProps> = ({ user, onLogin }) => {
                 className="bg-white/5 border border-white/10 p-10 rounded-[32px] hover:bg-blue-600 hover:border-blue-500 transition-all cursor-pointer group"
               >
                 <div className="bg-white/10 p-4 rounded-2xl w-fit mb-6 text-white group-hover:bg-white group-hover:text-blue-600 transition-all">
-                  {React.cloneElement(box.icon as React.ReactElement, { className: 'h-8 w-8' })}
+                  {/* Fix: Type assertion to React.ReactElement<any> ensures className property is valid for cloning */}
+                  {React.cloneElement(box.icon as React.ReactElement<any>, { className: 'h-8 w-8' })}
                 </div>
                 <h3 className="text-xl font-black text-white mb-2">{box.title}</h3>
                 <p className="text-slate-400 group-hover:text-blue-100 text-sm font-medium transition-all">{box.desc}</p>
