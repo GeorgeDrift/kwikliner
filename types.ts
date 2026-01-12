@@ -24,7 +24,7 @@ export interface User {
   email?: string;
   isVerified: boolean;
   companyName?: string;
-  linkedOwnerId?: string; 
+  linkedOwnerId?: string;
   complianceStatus: 'PENDING' | 'SUBMITTED' | 'APPROVED';
   // Financial Details
   bankName?: string;
@@ -32,6 +32,14 @@ export interface User {
   mobileMoneyNumber?: string;
   swiftCode?: string;
   primaryPayoutMethod?: 'BANK' | 'MOBILE_MONEY';
+  licenses?: string[];
+  paymentAccounts?: {
+    id: string;
+    type: 'BANK' | 'MOBILE_MONEY';
+    name: string;
+    description: string;
+    isPrimary: boolean;
+  }[];
 }
 
 export interface Vehicle {
@@ -39,8 +47,10 @@ export interface Vehicle {
   make: string;
   model: string;
   plate: string;
-  type: 'TRUCK' | 'VAN' | 'PICKUP' | 'BIKE';
+  type: 'TRUCK' | 'VAN' | 'PICKUP' | 'BIKE' | 'FLATBED' | 'TANKER' | 'BOX_BODY' | 'REFRIGERATED';
   capacity: string;
+  image?: string;
+  status?: 'Available' | 'In Transit' | 'Maintenance';
 }
 
 export interface Shipment {
