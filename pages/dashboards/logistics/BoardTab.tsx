@@ -1,0 +1,238 @@
+import React from 'react';
+import { Box, DollarSign, Clock, UserCheck, MoreHorizontal, Briefcase } from 'lucide-react';
+import { api } from '../../../services/api';
+
+interface BoardTabProps {
+    jobsTab: 'requests' | 'bids' | 'proposed';
+    setJobsTab: (tab: 'requests' | 'bids' | 'proposed') => void;
+    jobProposals: any[];
+    handleAcceptJob: (job: any) => Promise<void>;
+    fromLocation: string;
+    setFromLocation: (loc: string) => void;
+    toLocation: string;
+    setToLocation: (loc: string) => void;
+}
+
+const BoardTab: React.FC<BoardTabProps> = ({
+    jobsTab,
+    setJobsTab,
+    jobProposals,
+    handleAcceptJob,
+    fromLocation,
+    setFromLocation,
+    toLocation,
+    setToLocation
+}) => {
+    const marketplaceJobs = [
+        { id: 'MJ-501', shipper: 'Export Co Ltd', from: 'Blantyre', to: 'Mozambique Border', cargo: 'General Cargo (22T)', budget: 'Open Bid', bids: 8, deadline: '5 days' },
+        { id: 'MJ-502', shipper: 'Mining Corp', from: 'Lilongwe', to: 'Kasungu', cargo: 'Mining Equipment (30T)', budget: 'MWK 680,000', bids: 12, deadline: '7 days' },
+        { id: 'MJ-503', shipper: 'RetailChain MW', from: 'Mzuzu', to: 'Rumphi', cargo: 'Consumer Goods (15T)', budget: 'Open Bid', bids: 5, deadline: '3 days' },
+        { id: 'MJ-504', shipper: 'ConstructCo', from: 'Zomba', to: 'Mangochi', cargo: 'Building Materials (20T)', budget: 'MWK 420,000', bids: 7, deadline: '4 days' },
+        { id: 'MJ-505', shipper: 'AgriExport MW', from: 'Lilongwe', to: 'Blantyre', cargo: 'Agricultural Products (16T)', budget: 'Open Bid', bids: 9, deadline: '4 days' },
+        { id: 'MJ-506', shipper: 'TechDist Ltd', from: 'Blantyre', to: 'Lilongwe', cargo: 'Electronics (10T)', budget: 'MWK 290,000', bids: 6, deadline: '3 days' },
+    ];
+
+    const filteredMarketplaceJobs = marketplaceJobs.filter(job => {
+        const matchesFrom = fromLocation === 'All' || job.from === fromLocation;
+        const matchesTo = toLocation === 'All' || job.to === toLocation;
+        return matchesFrom && matchesTo;
+    });
+
+    return (
+        <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-500">
+            <div className="flex justify-between items-center">
+                <div>
+                    <h3 className="text-3xl font-black text-slate-900 tracking-tighter">Jobs Proposal</h3>
+                    <p className="text-slate-500 font-medium mt-1 text-sm">
+                        {jobsTab === 'requests' ? 'Review incoming job proposals from shippers' : 'Browse and bid on marketplace jobs'}
+                    </p>
+                </div>
+            </div>
+
+            {/* Tab Navigation */}
+            <div className="flex gap-4 overflow-x-auto scrollbar-hide p-1">
+                <button
+                    onClick={() => setJobsTab('requests')}
+                    className={`px-6 sm:px-8 py-3 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all shrink-0 ${jobsTab === 'requests' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100' : 'bg-white text-slate-400 border border-slate-100'
+                        }`}
+                >
+                    Customer Requests ({jobProposals.length})
+                </button>
+                <button
+                    onClick={() => setJobsTab('bids')}
+                    className={`px-6 sm:px-8 py-3 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all shrink-0 ${jobsTab === 'bids' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100' : 'bg-white text-slate-400 border border-slate-100'
+                        }`}
+                >
+                    Marketplace ({marketplaceJobs.length})
+                </button>
+                <button
+                    onClick={() => setJobsTab('proposed')}
+                    className={`px-6 sm:px-8 py-3 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all shrink-0 ${jobsTab === 'proposed' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100' : 'bg-white text-slate-400 border border-slate-100'
+                        }`}
+                >
+                    My Proposals (2)
+                </button>
+            </div>
+
+            {jobsTab === 'requests' ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {jobProposals.map((job) => (
+                        <div key={job.id} className="bg-white rounded-[32px] border border-slate-100 shadow-sm hover:shadow-xl transition-all p-6 sm:p-8">
+                            <div className="flex items-start justify-between mb-4 gap-4">
+                                <div>
+                                    <h4 className="text-base sm:text-lg font-black text-slate-900">{job.route}</h4>
+                                    <p className="text-[11px] sm:text-xs font-bold text-slate-400 mt-1">{job.shipper}</p>
+                                </div>
+                                <span className={`px-3 py-1.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest shrink-0 ${job.status === 'Urgent' ? 'bg-red-500 text-white' : 'bg-blue-500 text-white'
+                                    }`}>
+                                    {job.status}
+                                </span>
+                            </div>
+
+                            <div className="space-y-3 mb-6">
+                                <div className="flex items-center gap-3 text-sm">
+                                    <Box className="text-slate-400" size={16} />
+                                    <span className="font-bold text-slate-900">{job.cargo}</span>
+                                </div>
+                                <div className="flex items-center gap-3 text-sm">
+                                    <DollarSign className="text-green-600" size={16} />
+                                    <span className="font-black text-green-600">{job.price}</span>
+                                </div>
+                                <div className="flex items-center gap-3 text-sm">
+                                    <Clock className="text-orange-600" size={16} />
+                                    <span className="font-bold text-slate-600">Deadline: {job.deadline}</span>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={async () => {
+                                        await api.approveHireRequest(job.id);
+                                        handleAcceptJob(job);
+                                    }}
+                                    className="flex-grow py-3 bg-green-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-green-700 transition-all flex items-center justify-center gap-2"
+                                >
+                                    <UserCheck size={14} />
+                                    Approve & Assign
+                                </button>
+                                <button className="px-4 py-3 bg-slate-50 text-slate-400 rounded-xl hover:bg-slate-100 transition-all">
+                                    <MoreHorizontal size={18} />
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            ) : jobsTab === 'proposed' ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {[
+                        { id: 'P-9902', route: 'Lilongwe → Bt', cargo: '50kg Bag', quote: 'MWK 420,000', status: 'Pending Approval', date: '10m ago' },
+                        { id: 'P-9905', route: 'Blantyre → Mwanza', cargo: 'Cement (15T)', quote: 'MWK 380,000', status: 'In Review', date: '2h ago' },
+                    ].map((prop) => (
+                        <div key={prop.id} className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-6 sm:p-8">
+                            <div className="flex justify-between items-start mb-6">
+                                <div>
+                                    <h4 className="text-lg font-black text-slate-900">{prop.route}</h4>
+                                    <p className="text-xs font-bold text-slate-400 mt-1">{prop.cargo}</p>
+                                </div>
+                                <span className="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-50 text-amber-600 border border-amber-100">
+                                    {prop.status}
+                                </span>
+                            </div>
+                            <div className="flex items-center justify-between pt-6 border-t border-slate-50">
+                                <div>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Your Quote</p>
+                                    <p className="text-xl font-black text-indigo-600 tracking-tight">{prop.quote}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Sent</p>
+                                    <p className="text-xs font-bold text-slate-900">{prop.date}</p>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <div className="space-y-6">
+                    {/* Location Filters */}
+                    <div className="flex flex-col sm:flex-row gap-4 sm:items-center">
+                        <span className="text-sm font-bold text-slate-600">Filter by Route:</span>
+                        <div className="flex flex-wrap gap-3">
+                            <select
+                                value={fromLocation}
+                                onChange={(e) => setFromLocation(e.target.value)}
+                                className="flex-1 sm:flex-none px-4 py-3 bg-white border border-slate-200 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest focus:ring-2 focus:ring-indigo-600 outline-none cursor-pointer hover:border-indigo-600 transition-colors shrink-0"
+                            >
+                                <option value="All">From: All</option>
+                                <option value="Lilongwe">Lilongwe</option>
+                                <option value="Blantyre">Blantyre</option>
+                                <option value="Mzuzu">Mzuzu</option>
+                                <option value="Zomba">Zomba</option>
+                            </select>
+                            <select
+                                value={toLocation}
+                                onChange={(e) => setToLocation(e.target.value)}
+                                className="flex-1 sm:flex-none px-4 py-3 bg-white border border-slate-200 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest focus:ring-2 focus:ring-indigo-600 outline-none cursor-pointer hover:border-indigo-600 transition-colors shrink-0"
+                            >
+                                <option value="All">To: All</option>
+                                <option value="Blantyre">Blantyre</option>
+                                <option value="Lilongwe">Lilongwe</option>
+                                <option value="Kasungu">Kasungu</option>
+                                <option value="Mzuzu">Mzuzu</option>
+                                <option value="Rumphi">Rumphi</option>
+                                <option value="Zomba">Zomba</option>
+                                <option value="Mangochi">Mangochi</option>
+                                <option value="Mozambique Border">Mozambique Border</option>
+                            </select>
+                        </div>
+                        <span className="text-[10px] sm:text-xs text-slate-400">({filteredMarketplaceJobs.length} jobs found)</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {filteredMarketplaceJobs.map((job) => (
+                            <div key={job.id} className="bg-white rounded-[32px] border border-slate-100 shadow-sm hover:shadow-xl transition-all p-6 sm:p-8">
+                                <div className="flex items-start justify-between mb-4">
+                                    <div>
+                                        <h4 className="text-lg font-black text-slate-900">{job.from} → {job.to}</h4>
+                                        <p className="text-xs font-bold text-slate-400 mt-1">{job.shipper}</p>
+                                    </div>
+                                    <span className="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-purple-500 text-white">
+                                        {job.bids} Bids
+                                    </span>
+                                </div>
+
+                                <div className="space-y-3 mb-6">
+                                    <div className="flex items-center gap-3 text-sm">
+                                        <Box className="text-slate-400" size={16} />
+                                        <span className="font-bold text-slate-900">{job.cargo}</span>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-sm">
+                                        <DollarSign className={job.budget === 'Open Bid' ? 'text-amber-600' : 'text-green-600'} size={16} />
+                                        <span className={`font-black ${job.budget === 'Open Bid' ? 'text-amber-600 bg-amber-50 px-2 py-0.5 rounded' : 'text-green-600'}`}>
+                                            {job.budget === 'Open Bid' ? 'Open for Bidding' : `Budget: ${job.budget}`}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-sm">
+                                        <Clock className="text-orange-600" size={16} />
+                                        <span className="font-bold text-slate-600">Deadline: {job.deadline}</span>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-2">
+                                    <button className={`flex-grow py-3 text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${job.budget === 'Open Bid' ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-100' : 'bg-green-600 hover:bg-green-700 shadow-green-100'}`}>
+                                        <Briefcase size={14} />
+                                        {job.budget === 'Open Bid' ? 'Submit Bid' : 'Accept Job'}
+                                    </button>
+                                    <button className="px-4 py-3 bg-slate-50 text-slate-400 rounded-xl hover:bg-slate-100 transition-all">
+                                        <MoreHorizontal size={18} />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default BoardTab;

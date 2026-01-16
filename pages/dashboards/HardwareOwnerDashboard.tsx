@@ -8,7 +8,7 @@ import {
   Bell, Plus, ShoppingCart, DollarSign, Tag, Store, Ruler, Square,
   Trash2, Package, Filter, MoreHorizontal, ArrowUpRight,
   CreditCard, PieChart, Image as ImageIcon, X, Edit, Save, CheckCircle2,
-  ChevronRight, BarChart3, TrendingUp, Info, Award, Star
+  ChevronRight, BarChart3, TrendingUp, Info, Award, Star, Menu
 } from 'lucide-react';
 import ChatWidget from '../../components/ChatWidget';
 import { api } from '../../services/api';
@@ -27,6 +27,7 @@ interface CartItem {
 const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user }) => {
   const navigate = useNavigate();
   const [activeMenu, setActiveMenu] = useState('Overview');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Modal States
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
@@ -264,7 +265,14 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user })
   const parsePrice = (priceStr: string) => Number(priceStr.replace(/[^0-9]/g, ''));
   const cartTotal = cart.reduce((acc, item) => acc + (parsePrice(item.price) * item.quantity), 0);
 
-  const menuSections = {
+  type MenuItem = {
+    id: string;
+    icon: React.ReactNode;
+    label: string;
+    badge?: string;
+  };
+
+  const menuSections: Record<string, MenuItem[]> = {
     MAIN_MENU: [
       { id: 'Overview', icon: <LayoutGrid size={20} />, label: 'Overview' },
       { id: 'Inventory', icon: <Box size={20} />, label: 'Manage Products' },
@@ -285,50 +293,55 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user })
     switch (activeMenu) {
       case 'Overview':
         return (
-          <div className="grid grid-cols-12 gap-8 animate-in fade-in duration-500">
-            <div className="col-span-12 md:col-span-4 bg-white p-8 rounded-[32px] border border-slate-50 shadow-sm relative overflow-hidden group">
-              <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-6">Net Sales</h3>
-              <div className="flex items-end space-x-4 mb-8">
-                <span className="text-4xl font-black tracking-tighter">MWK 3.2M</span>
-                <span className="text-xs font-black text-green-500 bg-green-50 px-2 py-1 rounded-lg">↑ 18%</span>
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 sm:gap-8 animate-in fade-in duration-500">
+            <div className="col-span-12 md:col-span-4 bg-white p-6 sm:p-8 rounded-[32px] border border-slate-50 shadow-sm relative overflow-hidden group">
+              <h3 className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-400 mb-4 sm:mb-6">Net Sales</h3>
+              <div className="flex items-end space-x-4 mb-6 sm:mb-8">
+                <span className="text-3xl sm:text-4xl font-black tracking-tighter">MWK 3.2M</span>
+                <span className="text-emerald-500 text-xs font-black mb-1">+12%</span>
               </div>
-              <div className="h-24 w-full flex items-end space-x-1">
-                {[50, 40, 60, 30, 85, 45, 90, 60, 40].map((h, i) => (
-                  <div key={i} className="flex-grow bg-indigo-50 rounded-t-lg group-hover:bg-indigo-600 transition-all" style={{ height: `${h}%` }}></div>
+              <div className="flex -space-x-3">
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} className="h-8 w-8 sm:h-10 sm:w-10 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[10px] font-bold">
+                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${i + 20}`} alt="user" />
+                  </div>
                 ))}
+                <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full border-2 border-white bg-[#6366F1] flex items-center justify-center text-[10px] font-black text-white">
+                  +12
+                </div>
               </div>
             </div>
 
-            <div className="col-span-12 md:col-span-4 bg-white p-8 rounded-[32px] border border-slate-50 shadow-sm">
-              <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-6">Inventory Health</h3>
-              <div className="flex items-baseline space-x-2 mb-8">
-                <span className="text-4xl font-black tracking-tighter">{inventory.reduce((acc, item) => acc + Number(item.stock), 0)}</span>
-                <span className="text-xs font-black text-slate-300">Total Units</span>
+            <div className="col-span-12 md:col-span-4 bg-white p-6 sm:p-8 rounded-[32px] border border-slate-50 shadow-sm">
+              <h3 className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-400 mb-4 sm:mb-6">Inventory Health</h3>
+              <div className="flex items-baseline space-x-2 mb-6 sm:mb-8">
+                <span className="text-3xl sm:text-4xl font-black tracking-tighter">{inventory.reduce((acc, item) => acc + Number(item.stock), 0)}</span>
+                <span className="text-[10px] sm:text-xs font-black text-slate-300">Total Units</span>
               </div>
-              <div className="flex space-x-1.5 h-16 items-end">
+              <div className="flex space-x-1.5 h-12 sm:h-16 items-end">
                 {[...Array(20)].map((_, i) => (
                   <div key={i} className={`flex-1 rounded-full ${i < 19 ? 'bg-[#14B8A6]' : 'bg-slate-100'}`} style={{ height: `${Math.random() * 20 + 80}%` }}></div>
                 ))}
               </div>
             </div>
 
-            <div className="col-span-12 md:col-span-4 bg-[#6366F1] p-10 rounded-[32px] text-white shadow-2xl relative overflow-hidden group cursor-pointer" onClick={() => setActiveMenu('Inventory')}>
+            <div className="col-span-12 md:col-span-4 bg-[#6366F1] p-6 sm:p-10 rounded-[32px] text-white shadow-2xl relative overflow-hidden group cursor-pointer" onClick={() => setActiveMenu('Inventory')}>
               <div className="relative z-10">
-                <h3 className="text-2xl font-black leading-tight mb-4">List Equipment</h3>
-                <p className="text-indigo-100 text-sm font-medium mb-8">Post spare parts to the global shop.</p>
-                <button className="w-full py-4 bg-white text-[#6366F1] rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3">
-                  <Plus size={20} /> Add New SKU
+                <h3 className="text-xl sm:text-2xl font-black leading-tight mb-4">List Equipment</h3>
+                <p className="text-indigo-100 text-[10px] sm:text-sm font-medium mb-6 sm:mb-8">Post spare parts to the global shop.</p>
+                <button className="w-full py-3 sm:py-4 bg-white text-[#6366F1] rounded-2xl font-black text-[10px] sm:text-sm uppercase tracking-widest flex items-center justify-center gap-3">
+                  <Plus size={16} className="sm:size-[20px]" /> Add New SKU
                 </button>
               </div>
               <Box size={200} className="absolute right-[-60px] top-[-60px] opacity-[0.05]" />
             </div>
 
             {/* Top Lists Section */}
-            <div className="col-span-12 grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="col-span-12 grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
               {/* Top 5 Products (formerly Sales) */}
-              <div className="bg-white p-8 rounded-[32px] border border-slate-50 shadow-sm">
+              <div className="bg-white p-6 sm:p-8 rounded-[32px] border border-slate-50 shadow-sm">
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">Top Five Products</h3>
+                  <h3 className="text-[10px] sm:text-sm font-black uppercase tracking-widest text-slate-400">Top Five Products</h3>
                   <div className="bg-emerald-50 p-2 rounded-xl">
                     <Award size={16} className="text-emerald-600" />
                   </div>
@@ -356,9 +369,10 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user })
               </div>
 
               {/* Top 5 Sales (formerly Products) */}
-              <div className="bg-white p-8 rounded-[32px] border border-slate-50 shadow-sm">
+              {/* Top 5 Sales (formerly Products) */}
+              <div className="bg-white p-6 sm:p-8 rounded-[32px] border border-slate-50 shadow-sm">
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">Top Five Sales</h3>
+                  <h3 className="text-[10px] sm:text-sm font-black uppercase tracking-widest text-slate-400">Top Five Sales</h3>
                   <div className="bg-indigo-50 p-2 rounded-xl">
                     <TrendingUp size={16} className="text-indigo-600" />
                   </div>
@@ -391,16 +405,16 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user })
       case 'Inventory':
         return (
           <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-500">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sm:gap-0">
               <div>
-                <h3 className="text-3xl font-black text-slate-900 tracking-tighter">Manage Inventory</h3>
-                <p className="text-slate-500 font-medium mt-1 text-sm">Add, remove, and track your shop's stock levels.</p>
+                <h3 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tighter">Manage Inventory</h3>
+                <p className="text-slate-500 font-medium mt-1 text-xs sm:text-sm">Add, remove, and track your shop's stock levels.</p>
               </div>
               <button
                 onClick={() => setIsAddProductOpen(true)}
-                className="bg-[#6366F1] text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-100 flex items-center gap-2 hover:scale-105 transition-all"
+                className="w-full md:w-auto bg-[#6366F1] text-white px-6 py-3 sm:px-8 sm:py-4 rounded-xl sm:rounded-2xl font-black text-[10px] sm:text-xs uppercase tracking-widest shadow-xl shadow-indigo-100 flex items-center justify-center gap-2 hover:scale-105 transition-all"
               >
-                <Plus size={18} /> Add Product
+                <Plus size={16} className="sm:size-[18px]" /> Add Product
               </button>
             </div>
 
@@ -456,11 +470,11 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user })
         return (
           <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-500 relative">
             {/* Cart Trigger */}
-            <div className="fixed bottom-32 right-8 z-[60]">
-              <button onClick={() => setIsCartOpen(true)} className="h-20 w-20 bg-blue-600 text-white rounded-full shadow-2xl flex items-center justify-center relative hover:scale-110 active:scale-95 transition-all">
-                <ShoppingCart size={32} />
+            <div className="fixed bottom-24 right-4 sm:bottom-32 sm:right-8 z-[60]">
+              <button onClick={() => setIsCartOpen(true)} className="h-14 w-14 sm:h-20 sm:w-20 bg-blue-600 text-white rounded-full shadow-2xl flex items-center justify-center relative hover:scale-110 active:scale-95 transition-all">
+                <ShoppingCart size={24} className="sm:size-[32px]" />
                 {cart.length > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-black h-8 w-8 rounded-full flex items-center justify-center border-4 border-white">
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] sm:text-xs font-black h-6 w-6 sm:h-8 sm:w-8 rounded-full flex items-center justify-center border-4 border-white">
                     {cart.reduce((a, b) => a + b.quantity, 0)}
                   </span>
                 )}
@@ -469,29 +483,31 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user })
 
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
               <div>
-                <h3 className="text-3xl font-black text-slate-900 tracking-tighter">Kwik Shop</h3>
-                <p className="text-slate-500 font-medium mt-1 text-sm">Browse the global marketplace. Manage your products or shop from others.</p>
+                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tighter">Kwik Shop</h3>
+                <p className="text-slate-500 font-medium mt-1 text-xs sm:text-sm">Browse the global marketplace. Manage your products or shop from others.</p>
               </div>
-              <div className="relative flex-grow max-w-2xl">
+              <div className="relative flex-grow w-full md:max-w-2xl">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
-                <input className="bg-white border border-slate-100 rounded-xl pl-12 pr-6 py-3 text-[11px] font-black uppercase tracking-widest focus:ring-2 focus:ring-blue-600 outline-none w-full shadow-sm" placeholder="Search Marketplace..." />
+                <input className="bg-white border border-slate-100 rounded-xl pl-12 pr-6 py-3 text-[10px] sm:text-[11px] font-black uppercase tracking-widest focus:ring-2 focus:ring-blue-600 outline-none w-full shadow-sm" placeholder="Search Marketplace..." />
               </div>
             </div>
 
             {/* Location Filter */}
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
               <span className="text-sm font-bold text-slate-600">Filter by Location:</span>
-              <select
-                value={locationFilter}
-                onChange={(e) => setLocationFilter(e.target.value)}
-                className="px-6 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-black uppercase tracking-widest focus:ring-2 focus:ring-blue-600 outline-none cursor-pointer hover:border-blue-600 transition-colors"
-              >
-                <option value="All">All Locations</option>
-                <option value="Lilongwe">Lilongwe</option>
-                <option value="Blantyre">Blantyre</option>
-                <option value="Mzuzu">Mzuzu</option>
-                <option value="Zomba">Zomba</option>
-              </select>
+              <div className="w-full sm:w-auto">
+                <select
+                  value={locationFilter}
+                  onChange={(e) => setLocationFilter(e.target.value)}
+                  className="w-full sm:w-auto px-6 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-black uppercase tracking-widest focus:ring-2 focus:ring-blue-600 outline-none cursor-pointer hover:border-blue-600 transition-colors"
+                >
+                  <option value="All">All Locations</option>
+                  <option value="Lilongwe">Lilongwe</option>
+                  <option value="Blantyre">Blantyre</option>
+                  <option value="Mzuzu">Mzuzu</option>
+                  <option value="Zomba">Zomba</option>
+                </select>
+              </div>
             </div>
 
             {/* Product Filter Tabs */}
@@ -511,9 +527,9 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user })
             </div>
 
             {/* Category Filters */}
-            <div className="flex flex-wrap gap-4 items-center">
+            <div className="flex flex-wrap gap-2 sm:gap-4 items-center overflow-x-auto pb-2 scrollbar-hide">
               {['All', 'Hardware', 'Spares', 'Agri', 'Tech', 'Safety'].map(cat => (
-                <button key={cat} onClick={() => setCategoryFilter(cat)} className={`px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${categoryFilter === cat ? 'bg-blue-600 text-white shadow-xl shadow-blue-100' : 'bg-white text-slate-400 border border-slate-100 hover:border-blue-600'}`}>
+                <button key={cat} onClick={() => setCategoryFilter(cat)} className={`flex-shrink-0 px-6 sm:px-8 py-2 sm:py-3 rounded-xl sm:rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${categoryFilter === cat ? 'bg-blue-600 text-white shadow-xl shadow-blue-100' : 'bg-white text-slate-400 border border-slate-100 hover:border-blue-600'}`}>
                   {cat}
                 </button>
               ))}
@@ -575,87 +591,86 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user })
         const hAreaPathData = `${hPathData} L 100 100 L 0 100 Z`;
 
         return (
-          <div className="space-y-12 animate-in fade-in slide-in-from-right-8 duration-700">
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+          <div className="space-y-8 animate-in fade-in slide-in-from-right-8 duration-700 pb-10">
+            <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
               <div>
-                <h3 className="text-5xl font-black text-slate-900 tracking-tighter">Marketplace Intelligence</h3>
-                <p className="text-slate-500 font-medium mt-2 text-lg">Sales trends, stock efficiency, and customer insights.</p>
+                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tighter">Store Analytics</h3>
+                <p className="text-slate-500 font-medium mt-1 text-xs sm:text-sm">Sales trends, stock efficiency, and insights.</p>
               </div>
-              <div className="bg-white/50 backdrop-blur-md p-1.5 rounded-[24px] border border-white shadow-xl flex gap-1">
+              <div className="bg-white/50 backdrop-blur-md p-1 rounded-xl border border-white shadow-lg flex flex-wrap gap-1">
                 {['Daily', 'Weekly', 'Monthly', 'Yearly'].map(t => (
-                  <button key={t} className={`px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${t === 'Monthly' ? 'bg-indigo-600 text-white shadow-2xl shadow-indigo-200' : 'text-slate-400 hover:text-slate-900 hover:bg-white/80'}`}>
+                  <button key={t} className={`flex-1 sm:flex-none px-4 sm:px-8 py-2 sm:py-3 rounded-xl sm:rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${t === 'Monthly' ? 'bg-indigo-600 text-white shadow-2xl shadow-indigo-200' : 'text-slate-400 hover:text-slate-900 hover:bg-white/80'}`}>
                     {t}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="group relative overflow-hidden bg-gradient-to-br from-indigo-600 to-indigo-800 p-10 rounded-[56px] text-white shadow-2xl shadow-indigo-200 transition-all hover:-translate-y-2">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl group-hover:bg-white/20 transition-all"></div>
-                <div className="relative z-10">
-                  <div className="h-16 w-16 bg-white/20 backdrop-blur-lg rounded-3xl flex items-center justify-center mb-8">
-                    <DollarSign size={32} />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div className="bg-white p-4 rounded-[24px] border border-slate-100 shadow-sm transition-all hover:border-indigo-200 group flex flex-col justify-center">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="h-8 w-8 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <DollarSign size={16} />
                   </div>
-                  <p className="text-[11px] font-black text-indigo-100 uppercase tracking-widest mb-2 opacity-80 underline decoration-indigo-400/50 underline-offset-4">Gross Sales</p>
-                  <h4 className="text-5xl font-black tracking-tight mb-4">MWK 8.4M</h4>
-                  <div className="flex items-center gap-2 text-sm font-bold text-indigo-100 bg-white/10 w-fit px-4 py-1.5 rounded-full">
-                    <TrendingUp size={16} />
-                    <span>+15.2% growth</span>
-                  </div>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Gross Sales</p>
+                </div>
+                <h4 className="text-2xl font-black text-slate-900 tracking-tight">MWK 8.4M</h4>
+                <div className="flex items-center gap-2 text-[10px] font-bold text-indigo-600">
+                  <TrendingUp size={12} />
+                  <span>+15.2% grow</span>
                 </div>
               </div>
 
-              <div className="bg-white p-10 rounded-[56px] border border-slate-100 shadow-xl transition-all hover:-translate-y-2 group">
-                <div className="h-16 w-16 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
-                  <Box size={32} />
+              <div className="bg-white p-4 rounded-[24px] border border-slate-100 shadow-sm transition-all hover:border-blue-200 group flex flex-col justify-center">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="h-8 w-8 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Box size={16} />
+                  </div>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Orders Fulfilled</p>
                 </div>
-                <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">Orders Fulfilled</p>
-                <h4 className="text-5xl font-black text-slate-900 tracking-tight mb-4">1,240</h4>
-                <div className="flex items-center gap-2 text-sm font-bold text-blue-600 bg-blue-50 w-fit px-4 py-1.5 rounded-full">
-                  <CheckCircle2 size={16} />
-                  <span>98% High Accuracy</span>
+                <h4 className="text-2xl font-black text-slate-900 tracking-tight">1,240</h4>
+                <div className="flex items-center gap-2 text-[10px] font-bold text-blue-600">
+                  <CheckCircle2 size={12} />
+                  <span>98% Accuracy</span>
                 </div>
               </div>
 
-              <div className="bg-slate-900 p-10 rounded-[56px] text-white shadow-2xl transition-all hover:-translate-y-2 group">
+              <div className="bg-slate-900 p-4 rounded-[24px] text-white shadow-lg group overflow-hidden relative flex flex-col justify-center">
+                <div className="absolute top-0 right-0 w-16 h-16 bg-white/5 rounded-full -mr-6 -mt-6 blur-lg"></div>
                 <div className="relative z-10">
-                  <div className="h-16 w-16 bg-white/10 backdrop-blur-lg rounded-3xl flex items-center justify-center mb-8 group-hover:bg-white/20 transition-all">
-                    <Star size={32} className="text-amber-400" fill="currentColor" />
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="h-8 w-8 bg-white/10 backdrop-blur-lg rounded-xl flex items-center justify-center group-hover:bg-white/20 transition-all">
+                      <Star size={16} className="text-amber-400" fill="currentColor" />
+                    </div>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Merchant Rating</p>
                   </div>
-                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">Merchant Rating</p>
-                  <h4 className="text-5xl font-black tracking-tight mb-4">4.9/5</h4>
-                  <div className="flex items-center gap-2 text-sm font-bold text-amber-400 bg-white/5 w-fit px-4 py-1.5 rounded-full border border-white/10">
-                    <span>Top Hardware Vendor</span>
+                  <h4 className="text-2xl font-black tracking-tight">4.9/5</h4>
+                  <div className="flex items-center gap-2 text-[10px] font-bold text-amber-400">
+                    <span>Top Vendor</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-12 gap-8">
-              <div className="col-span-12 xl:col-span-8 bg-slate-900 p-12 rounded-[64px] shadow-2xl relative overflow-hidden">
-                <div className="flex justify-between items-center mb-8">
-                  <div>
-                    <h4 className="text-2xl font-black text-white tracking-tight">Inflows & outflows</h4>
-                  </div>
+            <div className="grid grid-cols-12 gap-4">
+              <div className="col-span-12 xl:col-span-8 bg-slate-900 p-6 rounded-[32px] shadow-xl relative overflow-hidden flex flex-col justify-between h-[340px]">
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="text-sm font-black text-white tracking-tight">Financial Flow</h4>
                   <button className="text-slate-400 hover:text-white transition-colors">
-                    <MoreHorizontal size={24} />
+                    <MoreHorizontal size={16} />
                   </button>
                 </div>
 
-                {/* Graph Container with Grid Background */}
-                <div className="relative mb-8">
-                  {/* Grid Background Pattern */}
-                  <div className="absolute inset-0" style={{
+                <div className="relative h-48 w-full mt-4 mb-2">
+                  <div className="absolute inset-0 rounded-2xl overflow-hidden" style={{
                     backgroundImage: `
                       linear-gradient(to right, rgba(71, 85, 105, 0.15) 1px, transparent 1px),
                       linear-gradient(to bottom, rgba(71, 85, 105, 0.15) 1px, transparent 1px)
                     `,
-                    backgroundSize: '60px 40px'
+                    backgroundSize: '40px 30px'
                   }}></div>
 
-                  {/* SVG Graph */}
-                  <div className="relative h-64 w-full">
+                  <div className="relative h-full w-full">
                     <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-full w-full">
                       <defs>
                         <linearGradient id="hardwareDarkGradient" x1="0" y1="0" x2="0" y2="1">
@@ -663,9 +678,7 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user })
                           <stop offset="100%" stopColor="#4F46E5" stopOpacity="0.05" />
                         </linearGradient>
                       </defs>
-                      {/* Filled gradient area */}
                       <path d={hAreaPathData} fill="url(#hardwareDarkGradient)" />
-                      {/* Dotted line overlay */}
                       <path
                         d={hPathData}
                         fill="none"
@@ -677,52 +690,53 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user })
                       />
                     </svg>
 
-                    {/* Date Labels */}
-                    <div className="absolute -bottom-8 w-full flex justify-between px-2">
-                      {['3 Jul', '7 Jul', '11 Jul', '15 Jul', '19 Jul', '23 Jul', '27 Jul', '31 Jul'].map((date, i) => (
-                        <span key={i} className="text-[10px] font-medium text-slate-500">{date}</span>
+                    <div className="absolute -bottom-6 w-full flex justify-between px-2">
+                      {['3 Jul', '10 Jul', '17 Jul', '24 Jul', '31 Jul'].map((date, i) => (
+                        <span key={i} className="text-[8px] sm:text-[9px] font-medium text-slate-500">{date}</span>
                       ))}
                     </div>
                   </div>
                 </div>
 
-                {/* Time Period Filters */}
-                <div className="flex items-center gap-3 mt-16 pt-6 border-t border-slate-800">
-                  <button className="px-6 py-2 bg-white text-slate-900 rounded-lg text-xs font-bold hover:bg-slate-100 transition-colors">
-                    Max
-                  </button>
-                  <button className="px-6 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg text-xs font-bold transition-colors">
-                    12 months
-                  </button>
-                  <button className="px-6 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg text-xs font-bold transition-colors">
-                    30 days
-                  </button>
-                  <button className="px-6 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg text-xs font-bold transition-colors">
-                    7 days
-                  </button>
-                  <button className="px-6 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg text-xs font-bold transition-colors">
-                    24 hours
-                  </button>
+                <div className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-800">
+                  {['Max', '30d', '7d', '24h'].map(label => (
+                    <button key={label} className={`px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all ${label === '30d' ? 'bg-white text-slate-900' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
+                      {label}
+                    </button>
+                  ))}
                   <div className="ml-auto flex items-center gap-2 text-slate-400">
-                    <Filter size={16} />
-                    <span className="text-xs font-bold">Filters</span>
+                    <Filter size={14} />
+                    <span className="text-[10px] font-bold">Filters</span>
                   </div>
                 </div>
               </div>
 
-              <div className="col-span-12 xl:col-span-4 bg-indigo-600 p-12 rounded-[64px] text-white shadow-2xl relative overflow-hidden flex flex-col justify-between">
-                <div className="relative z-10">
-                  <h4 className="text-3xl font-black mb-8 leading-tight">Inspiring Success</h4>
-                  <p className="text-indigo-100 font-medium text-lg leading-relaxed mb-10">"You are in the top 1% of hardware merchants in the Southern Region. Your customers appreciate your fast delivery!"</p>
-                  <div className="bg-white/10 backdrop-blur-lg p-8 rounded-[40px] border border-white/10">
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></div>
-                      <span className="text-xs font-black uppercase tracking-widest">Growth Peak</span>
+              <div className="col-span-12 xl:col-span-4 space-y-4">
+                <div className="bg-indigo-600 p-6 rounded-[32px] text-white shadow-2xl relative overflow-hidden flex flex-col justify-center h-[162px]">
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="h-8 w-8 bg-white/10 backdrop-blur-lg rounded-xl flex items-center justify-center">
+                        <TrendingUp size={16} />
+                      </div>
+                      <h5 className="text-sm font-black">Performance</h5>
                     </div>
-                    <p className="font-bold text-sm">Spare part bundles for FH16 models are in high demand this month. Restock now for maximum conversion.</p>
+                    <p className="text-indigo-100 text-[10px] font-medium leading-tight">Earnings up <span className="text-white font-black">15%</span> this month.</p>
                   </div>
+                  <TrendingUp className="absolute bottom-[-10px] right-[-10px] h-20 w-20 text-white/5 -rotate-12" />
                 </div>
-                <TrendingUp className="absolute bottom-[-40px] right-[-40px] h-64 w-64 text-white/5 -rotate-12" />
+
+                <div className="bg-slate-900 p-6 rounded-[32px] text-white shadow-2xl relative overflow-hidden flex flex-col justify-center h-[162px]">
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="h-8 w-8 bg-white/10 backdrop-blur-lg rounded-xl flex items-center justify-center">
+                        <Info size={16} className="text-amber-400" />
+                      </div>
+                      <h5 className="text-sm font-black">Inventory Tip</h5>
+                    </div>
+                    <p className="text-slate-400 text-[10px] font-medium leading-tight">FH16 spares are high demand. <span className="text-white font-black underline">Restock</span> now.</p>
+                  </div>
+                  <Box className="absolute bottom-[-10px] right-[-10px] h-20 w-20 text-white/5" />
+                </div>
               </div>
             </div>
           </div>
@@ -732,8 +746,23 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user })
   };
 
   return (
-    <div className="flex bg-[#F8F9FB] min-h-screen text-slate-900 overflow-hidden font-['Inter']">
-      <aside className="w-64 bg-white border-r border-slate-100 flex flex-col p-6 shrink-0 h-screen">
+    <div className="flex flex-col md:flex-row bg-[#F8F9FB] min-h-screen text-slate-900 overflow-hidden font-['Inter'] relative">
+
+      {/* MOBILE HEADER */}
+      <header className="md:hidden bg-white border-b border-slate-100 p-4 sticky top-0 z-[150] flex items-center justify-between shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="bg-[#6366F1] p-2 rounded-xl shadow-lg shadow-indigo-100">
+            <Globe className="text-white" size={20} />
+          </div>
+          <span className="font-black tracking-tighter text-lg">KwikLiner</span>
+        </div>
+        <button onClick={() => setIsMobileMenuOpen(true)} className="h-10 w-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-all">
+          <Menu size={24} />
+        </button>
+      </header>
+
+      {/* SIDEBAR NAVIGATION (Desktop) */}
+      <aside className="hidden md:flex w-64 bg-white border-r border-slate-100 flex-col p-6 shrink-0 h-screen sticky top-0">
         <div className="flex items-center justify-center mb-10 px-2">
           <div className="bg-[#6366F1] p-2 rounded-xl shadow-lg shadow-indigo-100">
             <Store className="text-white" size={24} />
@@ -768,41 +797,99 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user })
         </div>
       </aside>
 
-      <main className="flex-grow flex flex-col min-w-0 h-screen overflow-y-auto p-6 md:p-10 lg:p-14 pt-16 relative">
+      {/* MOBILE SIDEBAR (Drawer) */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-[200] md:hidden">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsMobileMenuOpen(false)}></div>
+          <aside className="absolute left-0 top-0 bottom-0 w-80 bg-white flex flex-col p-8 animate-in slide-in-from-left duration-300 shadow-2xl">
+            <div className="flex items-center justify-between mb-10 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="bg-[#6366F1] p-2.5 rounded-xl">
+                  <Globe className="text-white" size={24} />
+                </div>
+                <span className="font-black text-xl tracking-tighter">KwikLiner</span>
+              </div>
+              <button onClick={() => setIsMobileMenuOpen(false)} className="h-10 w-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="flex-grow space-y-10 overflow-y-auto pr-2 scrollbar-hide">
+              {Object.entries(menuSections).map(([title, items]) => (
+                <div key={title}>
+                  <p className="text-[11px] font-black text-slate-300 uppercase tracking-[0.25em] mb-6 px-4">{title.replace('_', ' ')}</p>
+                  <div className="space-y-2">
+                    {items.map(item => (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          if (item.id === 'Logout') navigate('/');
+                          else {
+                            setActiveMenu(item.id);
+                            setIsMobileMenuOpen(false);
+                          }
+                        }}
+                        className={`w-full flex items-center justify-between px-6 py-5 rounded-[24px] transition-all group ${activeMenu === item.id ? 'bg-[#6366F1] text-white shadow-2xl shadow-indigo-200' : 'text-slate-500 hover:bg-slate-50'}`}
+                      >
+                        <div className="flex items-center space-x-5">
+                          <span className={activeMenu === item.id ? 'text-white' : 'text-slate-400 group-hover:text-[#6366F1] transition-colors'}>{item.icon}</span>
+                          <span className="text-sm font-black tracking-tight">{item.label}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-8 border-t border-slate-50 mt-8 shrink-0">
+              <div className="bg-slate-50 p-6 rounded-[32px] flex items-center gap-4 border border-slate-100 overflow-hidden">
+                <div className="h-12 w-12 rounded-full bg-white shadow-sm overflow-hidden shrink-0"><img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`} alt="pfp" /></div>
+                <div className="min-w-0">
+                  <p className="text-xs font-black text-slate-900 truncate">{user.name}</p>
+                  <p className="text-[11px] font-bold text-indigo-400 uppercase tracking-widest mt-0.5">Merchant</p>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      )}
+
+      <main className="flex-grow flex flex-col min-w-0 h-screen overflow-y-auto p-4 md:p-10 lg:p-14 md:pt-16 relative">
         {renderContent()}
 
         {/* Add Product Modal */}
         {isAddProductOpen && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsAddProductOpen(false)}></div>
-            <div className="bg-white rounded-[40px] p-10 w-full max-w-lg relative z-10 animate-in zoom-in-95 duration-300 shadow-2xl">
-              <div className="flex justify-between items-center mb-8">
-                <h3 className="text-2xl font-black text-slate-900 tracking-tight">Add New Product</h3>
-                <button onClick={() => setIsAddProductOpen(false)} className="p-2 bg-slate-50 rounded-full hover:bg-red-50 hover:text-red-500 transition-colors">
-                  <X size={24} />
+            <div className="bg-white rounded-[32px] sm:rounded-[40px] p-6 sm:p-10 w-full max-w-lg relative z-10 animate-in zoom-in-95 duration-300 shadow-2xl">
+              <div className="flex justify-between items-center mb-6 sm:mb-8">
+                <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Add New Product</h3>
+                <button onClick={() => setIsAddProductOpen(false)} className="h-10 w-10 sm:h-12 sm:w-12 bg-slate-50 rounded-full flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-colors">
+                  <X size={20} className="sm:size-[24px]" />
                 </button>
               </div>
-              <div className="space-y-6">
-                <div className="h-40 w-full rounded-[32px] border-4 border-dashed border-slate-100 flex flex-col items-center justify-center text-slate-400 hover:border-[#6366F1] hover:text-[#6366F1] hover:bg-indigo-50/10 transition-all cursor-pointer">
-                  <ImageIcon size={32} />
-                  <span className="text-[11px] font-black uppercase tracking-widest mt-2">Upload Image</span>
+              <div className="space-y-4 sm:space-y-6">
+                <div className="h-32 sm:h-40 w-full rounded-[24px] sm:rounded-[32px] border-4 border-dashed border-slate-100 flex flex-col items-center justify-center text-slate-400 hover:border-[#6366F1] hover:text-[#6366F1] hover:bg-indigo-50/10 transition-all cursor-pointer">
+                  <ImageIcon size={28} className="sm:size-[32px]" />
+                  <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest mt-2">Upload Image</span>
                 </div>
-                <div className="space-y-3">
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Product Name</label>
-                  <input className="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-[#6366F1]" placeholder="e.g. Solar Generator"
+                <div className="space-y-2 sm:space-y-3">
+                  <label className="text-[10px] sm:text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Product Name</label>
+                  <input className="w-full p-3 sm:p-4 bg-slate-50 rounded-xl sm:rounded-2xl font-bold outline-none border-2 border-transparent focus:border-[#6366F1]" placeholder="e.g. Solar Generator"
                     value={newItemData.name} onChange={e => setNewItemData({ ...newItemData, name: e.target.value })}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-3">
-                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Price (MWK)</label>
-                    <input className="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-[#6366F1]" placeholder="0.00"
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2 sm:space-y-3">
+                    <label className="text-[10px] sm:text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Price (MWK)</label>
+                    <input className="w-full p-3 sm:p-4 bg-slate-50 rounded-xl sm:rounded-2xl font-bold outline-none border-2 border-transparent focus:border-[#6366F1]" placeholder="0.00"
                       value={newItemData.price} onChange={e => setNewItemData({ ...newItemData, price: e.target.value })}
                     />
                   </div>
-                  <div className="space-y-3">
-                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Stock Qty</label>
-                    <input className="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-[#6366F1]" placeholder="0"
+                  <div className="space-y-2 sm:space-y-3">
+                    <label className="text-[10px] sm:text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Stock Qty</label>
+                    <input className="w-full p-3 sm:p-4 bg-slate-50 rounded-xl sm:rounded-2xl font-bold outline-none border-2 border-transparent focus:border-[#6366F1]" placeholder="0"
                       value={newItemData.stock} onChange={e => setNewItemData({ ...newItemData, stock: e.target.value })}
                     />
                   </div>
@@ -815,7 +902,7 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user })
                     category: newItemData.category,
                     image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&w=400',
                   })}
-                  className="w-full py-5 bg-[#6366F1] text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-indigo-100 mt-4"
+                  className="w-full py-4 sm:py-5 bg-[#6366F1] text-white rounded-xl sm:rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-indigo-100 mt-4 text-xs sm:text-sm"
                 >
                   Publish Item
                 </button>
@@ -828,48 +915,48 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user })
         {editingItem && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setEditingItem(null)}></div>
-            <div className="bg-white rounded-[40px] p-10 w-full max-w-lg relative z-10 animate-in zoom-in-95 duration-300 shadow-2xl">
-              <div className="flex justify-between items-center mb-8">
-                <h3 className="text-2xl font-black text-slate-900 tracking-tight">Edit Product</h3>
-                <button onClick={() => setEditingItem(null)} className="p-2 bg-slate-50 rounded-full hover:bg-red-50 hover:text-red-500 transition-colors">
-                  <X size={24} />
+            <div className="bg-white rounded-[32px] sm:rounded-[40px] p-6 sm:p-10 w-full max-w-lg relative z-10 animate-in zoom-in-95 duration-300 shadow-2xl">
+              <div className="flex justify-between items-center mb-6 sm:mb-8">
+                <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Edit Product</h3>
+                <button onClick={() => setEditingItem(null)} className="h-10 w-10 sm:h-12 sm:w-12 bg-slate-50 rounded-full flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-colors">
+                  <X size={20} className="sm:size-[24px]" />
                 </button>
               </div>
-              <form onSubmit={saveEditedItem} className="space-y-6">
-                <div className="h-40 w-full rounded-[32px] overflow-hidden relative">
+              <form onSubmit={saveEditedItem} className="space-y-4 sm:space-y-6">
+                <div className="h-32 sm:h-40 w-full rounded-[24px] sm:rounded-[32px] overflow-hidden relative">
                   <img src={editingItem.image} className="w-full h-full object-cover" alt="Product" />
                   <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                    <span className="bg-white/90 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest">Change Image</span>
+                    <span className="bg-white/90 px-4 py-2 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest">Change Image</span>
                   </div>
                 </div>
-                <div className="space-y-3">
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Product Name</label>
+                <div className="space-y-2 sm:space-y-3">
+                  <label className="text-[10px] sm:text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Product Name</label>
                   <input
                     value={editingItem.name}
                     onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
-                    className="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-[#6366F1]"
+                    className="w-full p-3 sm:p-4 bg-slate-50 rounded-xl sm:rounded-2xl font-bold outline-none border-2 border-transparent focus:border-[#6366F1]"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-3">
-                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Price</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2 sm:space-y-3">
+                    <label className="text-[10px] sm:text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Price</label>
                     <input
                       value={editingItem.price}
                       onChange={(e) => setEditingItem({ ...editingItem, price: e.target.value })}
-                      className="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-[#6366F1]"
+                      className="w-full p-3 sm:p-4 bg-slate-50 rounded-xl sm:rounded-2xl font-bold outline-none border-2 border-transparent focus:border-[#6366F1]"
                     />
                   </div>
-                  <div className="space-y-3">
-                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Stock Qty</label>
+                  <div className="space-y-2 sm:space-y-3">
+                    <label className="text-[10px] sm:text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Stock Qty</label>
                     <input
                       value={editingItem.stock}
                       onChange={(e) => setEditingItem({ ...editingItem, stock: e.target.value })}
-                      className="w-full p-4 bg-slate-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-[#6366F1]"
+                      className="w-full p-3 sm:p-4 bg-slate-50 rounded-xl sm:rounded-2xl font-bold outline-none border-2 border-transparent focus:border-[#6366F1]"
                     />
                   </div>
                 </div>
-                <button type="submit" className="w-full py-5 bg-[#6366F1] text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-indigo-100 mt-4 flex items-center justify-center gap-2">
-                  <Save size={18} /> Save Changes
+                <button type="submit" className="w-full py-4 sm:py-5 bg-[#6366F1] text-white rounded-xl sm:rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-indigo-100 mt-4 flex items-center justify-center gap-2 text-xs sm:text-sm">
+                  <Save size={16} className="sm:size-[18px]" /> Save Changes
                 </button>
               </form>
             </div>

@@ -41,14 +41,43 @@ export const api = {
     const res = await fetch(`${API_URL}/shipper/drivers`);
     return res.json();
   },
+  getLoadBids: async (loadId: string) => {
+    try {
+      const res = await fetch(`${API_URL}/shipper/loads/${loadId}/bids`);
+      return await res.json();
+    } catch (e) { return []; }
+  },
+  acceptBid: async (loadId: string, bidId: string) => {
+    const res = await fetch(`${API_URL}/shipper/loads/${loadId}/bids/${bidId}/accept`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    return res.json();
+  },
 
   // --- DRIVER ACTIONS ---
   getAvailableJobs: async () => {
-    const res = await fetch(`${API_URL}/driver/jobs`);
-    return res.json();
+    try {
+      const res = await fetch(`${API_URL}/driver/jobs`);
+      return await res.json();
+    } catch { return []; } // Mock fail
   },
   getDriverTrips: async (driverId: string) => {
-    const res = await fetch(`${API_URL}/driver/${driverId}/trips`);
+    // Mock for now or fetch
+    return [];
+  },
+  bidOnLoad: async (loadId: string, bidData: any) => {
+    // For now, this can mimic a backend call
+    return { success: true };
+  },
+  driverCommitToJob: async (loadId: string, decision: 'COMMIT' | 'DECLINE', reason?: string) => {
+    // Decision: COMMIT -> moves to READY_FOR_PICKUP or PENDING_DEPOSIT
+    // Decision: DECLINE -> moves back to BIDDING_OPEN
+    const res = await fetch(`${API_URL}/driver/jobs/${loadId}/commit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ decision, reason }),
+    });
     return res.json();
   },
 
@@ -67,6 +96,34 @@ export const api = {
   },
   deleteVehicle: async (vehicleId: string) => {
     await fetch(`${API_URL}/logistics/fleet/${vehicleId}`, { method: 'DELETE' });
+  },
+  acceptJob: async (jobId: string, ownerId: string) => {
+    // This is for logistics/driver accepting a job
+    return { success: true };
+  },
+
+  // --- TRUCK HIRING FLOW ---
+  postVehicleAvailability: async (data: any) => {
+    // Post a truck as available for hire
+    // Endpoint might be /fleets/availability
+    return { success: true, id: Date.now() };
+  },
+  getAvailableFleets: async () => {
+    // Fetch list of trucks available for hire
+    // Mocking for now as backend might not have it
+    return [
+      { id: 'av-1', company: 'Logistics Pro', routes: 'LLW - BT', capacity: '30T', price: 'MWK 20000/day' },
+      { id: 'av-2', company: 'Fast Haul', routes: 'Mzuzu - LLW', capacity: '15T', price: 'MWK 15000/day' }
+    ];
+  },
+  hireTruck: async (listingId: string, hireData: any) => {
+    // Shipper hires a truck -> Creates a shipment with status 'Waiting for Confirmation'
+    // This interacts with POST /shipper/loads but with specific 'hire' flag or assigned driver
+    return { success: true };
+  },
+  approveHireRequest: async (jobId: string) => {
+    // Logistics/Driver approves the hire -> Updates status to 'Pending Deposit'
+    return { success: true };
   },
 
   // --- MARKET/HARDWARE ACTIONS ---
