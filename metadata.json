@@ -1,7 +1,0 @@
-{
-  "name": "KwikLiner Freight Marketplace",
-  "description": "A high-performance freight marketplace connecting shippers, independent drivers, and logistics companies with a focus on independence and manual planning.",
-  "requestFramePermissions": [
-    "camera"
-  ]
-}

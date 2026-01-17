@@ -1,0 +1,90 @@
+-- KwikLiner Database Schema (Simple TXT bypass)
+
+CREATE TABLE IF NOT EXISTS users (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    role VARCHAR(50) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE,
+    phone VARCHAR(50),
+    password_hash VARCHAR(255) NOT NULL,
+    company_name VARCHAR(255),
+    is_verified BOOLEAN DEFAULT FALSE,
+    compliance_status VARCHAR(50) DEFAULT 'PENDING',
+    bank_name VARCHAR(255),
+    account_number VARCHAR(255),
+    mobile_money_number VARCHAR(50),
+    swift_code VARCHAR(20),
+    primary_payout_method VARCHAR(20) DEFAULT 'BANK',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS vehicles (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    owner_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    make VARCHAR(100) NOT NULL,
+    model VARCHAR(100) NOT NULL,
+    plate VARCHAR(20) UNIQUE NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    capacity VARCHAR(50),
+    status VARCHAR(50) DEFAULT 'Available',
+    images TEXT[], -- Array of base64 images
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS vehicle_listings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    driver_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    driver_name VARCHAR(255),
+    vehicle_type VARCHAR(100),
+    capacity VARCHAR(50),
+    route VARCHAR(255),
+    price VARCHAR(100),
+    images TEXT[], -- Base64 images
+    location VARCHAR(100),
+    rating DECIMAL(2,1) DEFAULT 5.0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS shipments (
+    id VARCHAR(20) PRIMARY KEY,
+    shipper_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    driver_id UUID REFERENCES users(id),
+    owner_id UUID REFERENCES users(id),
+    assigned_driver_id UUID REFERENCES users(id), -- For direct hire tracking
+    route VARCHAR(255) NOT NULL,
+    cargo VARCHAR(255) NOT NULL,
+    weight FLOAT,
+    price DECIMAL(15, 2),
+    status VARCHAR(50) DEFAULT 'Finding Driver',
+    color VARCHAR(100),
+    deposit_status VARCHAR(50) DEFAULT 'Pending',
+    payment_timing VARCHAR(50) DEFAULT 'Deposit',
+    pickup_type VARCHAR(50) DEFAULT 'Standard',
+    order_ref VARCHAR(255),
+    pickup_date DATE,
+    bidder_ids UUID[], -- Array of drivers who bid
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+
+CREATE TABLE IF NOT EXISTS bids (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    load_id VARCHAR(20) REFERENCES shipments(id) ON DELETE CASCADE,
+    driver_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    amount DECIMAL(15, 2) NOT NULL,
+    status VARCHAR(50) DEFAULT 'Pending',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS products (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    owner_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    price DECIMAL(15, 2) NOT NULL,
+    price_str VARCHAR(50),
+    stock INT DEFAULT 0,
+    category VARCHAR(100),
+    image TEXT,
+    seller VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
