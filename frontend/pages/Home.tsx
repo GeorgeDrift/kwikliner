@@ -154,10 +154,10 @@ const Home: React.FC<HomeProps> = ({ user, onLogin }) => {
   ];
 
   return (
-    <div className="flex flex-col bg-white min-h-screen">
+    <div className="flex flex-col bg-white dark:bg-slate-900 min-h-screen transition-colors duration-200">
       {/* Hero / Marketplace Header */}
-      <section className="bg-blue-600 pt-20 pb-32 px-4 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-1/3 h-full bg-blue-500/20 skew-x-12 transform translate-x-1/2"></div>
+      <section className="bg-blue-600 dark:bg-blue-800 pt-20 pb-32 px-4 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-1/3 h-full bg-blue-500/20 dark:bg-blue-400/10 skew-x-12 transform translate-x-1/2"></div>
         <div className="max-w-[1920px] mx-auto text-center relative z-10">
           <h1 className="text-4xl md:text-6xl lg:text-8xl font-black text-white mb-6 tracking-tight">
             The Smart Way to <br /> <span className="text-blue-400">Move Freight.</span>
@@ -166,18 +166,18 @@ const Home: React.FC<HomeProps> = ({ user, onLogin }) => {
             Africa's unified platform for freight, vehicle tools, warehouses, and logistics talent.
           </p>
 
-          <div className="max-w-4xl mx-auto bg-white p-3 rounded-[32px] shadow-2xl flex flex-col md:flex-row gap-2 border border-blue-50">
-            <div className="flex-grow flex items-center px-6 py-4 border-b md:border-b-0 md:border-r border-slate-100">
-              <Search className="h-6 w-6 text-blue-600 mr-4" />
+          <div className="max-w-4xl mx-auto bg-white dark:bg-slate-800 p-3 rounded-[32px] shadow-2xl flex flex-col md:flex-row gap-2 border border-blue-50 dark:border-slate-700">
+            <div className="flex-grow flex items-center px-6 py-4 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-700">
+              <Search className="h-6 w-6 text-blue-600 dark:text-blue-400 mr-4" />
               <input
                 type="text"
                 placeholder="Search freight, tools, or services..."
-                className="w-full outline-none text-slate-800 font-bold placeholder:text-slate-400 text-lg"
+                className="w-full bg-transparent outline-none text-slate-800 dark:text-slate-100 font-bold placeholder:text-slate-400 dark:placeholder:text-slate-500 text-lg"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <button className="bg-blue-600 text-white px-12 py-5 rounded-2xl font-black hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 text-lg">
+            <button className="bg-blue-600 dark:bg-blue-700 text-white px-12 py-5 rounded-2xl font-black hover:bg-blue-700 dark:hover:bg-blue-600 transition-all shadow-lg shadow-blue-200 dark:shadow-none text-lg">
               Search
             </button>
           </div>
@@ -186,17 +186,17 @@ const Home: React.FC<HomeProps> = ({ user, onLogin }) => {
 
       {/* Load Marketplace Section */}
       <section className="max-w-[1920px] mx-auto px-4 -mt-16 mb-20 relative z-20">
-        <div className="flex items-center justify-between mb-8 bg-white p-6 rounded-3xl shadow-lg border border-slate-100">
-          <h2 className="text-2xl font-black text-slate-900 flex items-center">
-            <Truck className="mr-3 text-blue-600" /> Live Freight Marketplace
+        <div className="flex items-center justify-between mb-8 bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-lg border border-slate-100 dark:border-slate-700">
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white flex items-center">
+            <Truck className="mr-3 text-blue-600 dark:text-blue-400" /> Live Freight Marketplace
           </h2>
-          <button onClick={() => navigate('/register')} className="text-blue-600 font-black flex items-center text-sm hover:underline uppercase tracking-widest">
+          <button onClick={() => navigate('/register')} className="text-blue-600 dark:text-blue-400 font-black flex items-center text-sm hover:underline uppercase tracking-widest">
             Browse Loads <ArrowRight className="ml-2 h-4 w-4" />
           </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8">
           {featuredLoads.map((load) => (
-            <div key={load.id} className="bg-white rounded-[40px] overflow-hidden shadow-xl border border-slate-50 hover:border-blue-300 transition-all group hover:-translate-y-2">
+            <div key={load.id} className="bg-white dark:bg-slate-800 rounded-[40px] overflow-hidden shadow-xl border border-slate-50 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-500 transition-all group hover:-translate-y-2">
               <div className="h-56 overflow-hidden relative">
                 <img src={load.image} alt={load.cargo} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                 <div className="absolute top-6 left-6 bg-blue-600 text-white px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-[0.2em] shadow-lg">
@@ -204,19 +204,19 @@ const Home: React.FC<HomeProps> = ({ user, onLogin }) => {
                 </div>
               </div>
               <div className="p-8">
-                <h3 className="font-black text-xl text-slate-900 mb-2">{load.route}</h3>
+                <h3 className="font-black text-xl text-slate-900 dark:text-white mb-2">{load.route}</h3>
                 <div className="flex flex-wrap gap-4 mb-6">
-                  <span className="text-[11px] font-black text-slate-500 flex items-center bg-slate-50 px-3 py-1.5 rounded-xl"><Package className="h-3 w-3 mr-2 text-blue-500" /> {load.cargo}</span>
-                  <span className="text-[11px] font-black text-slate-500 flex items-center bg-slate-50 px-3 py-1.5 rounded-xl"><Gavel className="h-3 w-3 mr-2 text-blue-500" /> {load.weight}</span>
+                  <span className="text-[11px] font-black text-slate-500 dark:text-slate-400 flex items-center bg-slate-50 dark:bg-slate-900 px-3 py-1.5 rounded-xl"><Package className="h-3 w-3 mr-2 text-blue-500" /> {load.cargo}</span>
+                  <span className="text-[11px] font-black text-slate-500 dark:text-slate-400 flex items-center bg-slate-50 dark:bg-slate-900 px-3 py-1.5 rounded-xl"><Gavel className="h-3 w-3 mr-2 text-blue-500" /> {load.weight}</span>
                 </div>
-                <div className="pt-6 border-t border-slate-50 flex justify-between items-center">
+                <div className="pt-6 border-t border-slate-50 dark:border-slate-700 flex justify-between items-center">
                   <div>
-                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Estimated Price</p>
-                    <span className="text-blue-700 font-black text-2xl">{load.price}</span>
+                    <p className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Estimated Price</p>
+                    <span className="text-blue-700 dark:text-blue-400 font-black text-2xl">{load.price}</span>
                   </div>
                   <button
                     onClick={() => navigate('/register')}
-                    className="h-14 w-14 bg-blue-600 text-white flex items-center justify-center rounded-2xl hover:bg-blue-700 hover:rotate-90 transition-all shadow-xl shadow-blue-100"
+                    className="h-14 w-14 bg-blue-600 dark:bg-blue-700 text-white flex items-center justify-center rounded-2xl hover:bg-blue-700 dark:hover:bg-blue-600 hover:rotate-90 transition-all shadow-xl shadow-blue-100 dark:shadow-none"
                   >
                     <ArrowRight className="h-6 w-6" />
                   </button>
@@ -228,36 +228,36 @@ const Home: React.FC<HomeProps> = ({ user, onLogin }) => {
       </section>
 
       {/* Tools & Equipment Section */}
-      <section className="bg-slate-50 py-24 border-y border-slate-200">
+      <section className="bg-slate-50 dark:bg-slate-950 py-24 border-y border-slate-200 dark:border-slate-800 transition-colors">
         <div className="max-w-[1920px] mx-auto px-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-12 gap-4">
             <div>
-              <h2 className="text-3xl font-black text-slate-900 flex items-center">
-                <ShoppingCart className="mr-3 text-blue-600" /> Tools & Spares Market
+              <h2 className="text-3xl font-black text-slate-900 dark:text-white flex items-center">
+                <ShoppingCart className="mr-3 text-blue-600 dark:text-blue-400" /> Tools & Spares Market
               </h2>
-              <p className="text-slate-500 font-medium mt-2">Verified hardware owners list high-quality equipment for your fleet.</p>
+              <p className="text-slate-500 dark:text-slate-400 font-medium mt-2">Verified hardware owners list high-quality equipment for your fleet.</p>
             </div>
-            <button onClick={() => navigate('/register')} className="bg-white border-2 border-slate-200 text-slate-600 px-8 py-3 rounded-2xl font-black text-sm hover:border-blue-600 hover:text-blue-600 transition-all">
+            <button onClick={() => navigate('/register')} className="bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 px-8 py-3 rounded-2xl font-black text-sm hover:border-blue-600 dark:hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-all">
               Visit Spares Shop
             </button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8">
             {toolsAndEquipment.map((tool, i) => (
-              <div key={i} className="bg-white rounded-[40px] p-3 shadow-lg border border-slate-100 hover:shadow-2xl transition-all cursor-pointer group flex flex-col">
+              <div key={i} className="bg-white dark:bg-slate-800 rounded-[40px] p-3 shadow-lg border border-slate-100 dark:border-slate-700 hover:shadow-2xl transition-all cursor-pointer group flex flex-col">
                 <div className="h-64 rounded-[32px] overflow-hidden mb-6 relative">
                   <img src={tool.image} alt={tool.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                  <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl text-[11px] font-black text-blue-600 uppercase tracking-widest shadow-sm">
+                  <div className="absolute bottom-4 left-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-4 py-2 rounded-2xl text-[11px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest shadow-sm">
                     {tool.category}
                   </div>
                 </div>
                 <div className="px-5 pb-5 flex-grow flex flex-col justify-between">
                   <div>
-                    <h4 className="font-black text-xl text-slate-900 mb-2">{tool.name}</h4>
-                    <p className="text-sm text-slate-500 font-medium leading-relaxed mb-6">{tool.description}</p>
+                    <h4 className="font-black text-xl text-slate-900 dark:text-white mb-2">{tool.name}</h4>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium leading-relaxed mb-6">{tool.description}</p>
                   </div>
-                  <div className="flex justify-between items-center pt-6 border-t border-slate-50">
-                    <span className="text-2xl font-black text-blue-600">{tool.price}</span>
-                    <button onClick={() => navigate('/register')} className="bg-blue-600 text-white px-6 py-3 rounded-xl font-black text-sm shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all flex items-center">
+                  <div className="flex justify-between items-center pt-6 border-t border-slate-50 dark:border-slate-700">
+                    <span className="text-2xl font-black text-blue-600 dark:text-blue-400">{tool.price}</span>
+                    <button onClick={() => navigate('/register')} className="bg-blue-600 dark:bg-blue-700 text-white px-6 py-3 rounded-xl font-black text-sm shadow-lg shadow-blue-100 dark:shadow-none hover:bg-blue-700 dark:hover:bg-blue-600 transition-all flex items-center">
                       Buy Now <ShoppingCart className="ml-2 h-4 w-4" />
                     </button>
                   </div>

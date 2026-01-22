@@ -36,6 +36,16 @@ const hardwareController = {
         } catch (err) {
             res.status(500).json({ error: err.message || 'Delete failed' });
         }
+    },
+
+    purchaseProducts: async (req, res) => {
+        try {
+            const result = await hardwareService.processPurchase(req.user.id, req.body.items);
+            res.json(result);
+        } catch (err) {
+            console.error(err);
+            res.status(400).json({ error: err.message || 'Purchase failed' });
+        }
     }
 };
 

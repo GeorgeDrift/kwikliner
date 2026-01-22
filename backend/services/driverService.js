@@ -77,6 +77,54 @@ const driverService = {
             RETURNING *
         `, [driverId, driverName, vehicleType, capacity, route, price, images, location]);
         return result.rows[0];
+    },
+
+    getStats: async (driverId) => {
+        // 1. Total History/Orders
+        const historyRes = await pool.query(
+            'SELECT COUNT(*) as total FROM shipments WHERE (driver_id = $1 OR assigned_driver_id = $1)',
+            [driverId]
+        );
+
+        // 2. Wallet & Lifetime Earnings
+        const walletRes = await pool.query(`
+            SELECT balance, currency, 
+            (SELECT COALESCE(SUM(net_amount), 0) FROM transactions WHERE user_id = $1 AND type != 'Withdrawal') as total_earned
+            FROM wallets WHERE user_id = $1
+        `, [driverId]);
+
+        // 3. Fleet Capacity
+        const fleetRes = await pool.query(`
+            SELECT COUNT(*) as count, 
+            COALESCE(SUM(CAST(REGEXP_REPLACE(capacity, '[^0-9.]', '', 'g') AS FLOAT)), 0) as capacity 
+            FROM vehicles WHERE owner_id = $1
+        `, [driverId]);
+
+        // 4. Market Jobs Count
+        const marketRes = await pool.query(
+            "SELECT COUNT(*) as total FROM shipments WHERE status IN ('Bidding Open', 'Finding Driver')"
+        );
+
+        // 5. Monthly Revenue for Current Year
+        const revenueRes = await pool.query(`
+            SELECT TO_CHAR(created_at, 'Mon') as month, SUM(net_amount) as amount 
+            FROM transactions 
+            WHERE user_id = $1 AND type != 'Withdrawal' 
+              AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+            GROUP BY month, EXTRACT(MONTH FROM created_at)
+            ORDER BY EXTRACT(MONTH FROM created_at)
+        `, [driverId]);
+
+        return {
+            totalOrders: parseInt(historyRes.rows[0].total),
+            wallet: walletRes.rows[0] || { balance: 0, currency: 'MWK', total_earned: 0 },
+            fleet: {
+                count: parseInt(fleetRes.rows[0].count),
+                capacity: parseFloat(fleetRes.rows[0].capacity)
+            },
+            marketJobs: parseInt(marketRes.rows[0].total),
+            revenue: revenueRes.rows
+        };
     }
 };
 

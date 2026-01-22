@@ -11,5 +11,9 @@ router.use(logisticsMiddleware);
 router.get('/fleet', logisticsController.getFleet);
 router.post('/fleet', logisticsController.addVehicle);
 router.delete('/fleet/:vehicleId', logisticsController.deleteVehicle);
+router.get('/stats', logisticsController.getStats);
+router.get('/drivers', logisticsController.getDrivers);
+router.get('/listings', logisticsController.getListings);
+router.get('/analytics', logisticsController.getRevenueAnalytics);
 
 module.exports = router;

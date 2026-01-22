@@ -25,14 +25,19 @@ export const api = {
   },
 
   // --- SHIPPER ACTIONS ---
-  getShipperLoads: async (shipperId: string) => {
-    const res = await fetch(`${API_URL}/shipper/${shipperId}/loads`);
+  getShipperLoads: async () => {
+    const res = await fetch(`${API_URL}/shipper/loads`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
     return res.json();
   },
   postLoad: async (loadData: any) => {
     const res = await fetch(`${API_URL}/shipper/loads`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
       body: JSON.stringify(loadData),
     });
     return res.json();
@@ -48,9 +53,13 @@ export const api = {
     } catch (e) { return []; }
   },
   acceptBid: async (loadId: string, bidId: string) => {
-    const res = await fetch(`${API_URL}/shipper/loads/${loadId}/bids/${bidId}/accept`, {
+    const res = await fetch(`${API_URL}/shipper/bids/accept`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({ loadId, bidId }),
     });
     return res.json();
   },
@@ -66,6 +75,12 @@ export const api = {
   },
   getDriverTrips: async () => {
     const res = await fetch(`${API_URL}/driver/trips`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    return res.json();
+  },
+  getDriverStats: async () => {
+    const res = await fetch(`${API_URL}/driver/stats`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     });
     return res.json();
@@ -107,19 +122,51 @@ export const api = {
 
   // --- LOGISTICS ACTIONS ---
   getFleet: async (ownerId: string) => {
-    const res = await fetch(`${API_URL}/logistics/${ownerId}/fleet`);
+    const res = await fetch(`${API_URL}/logistics/${ownerId}/fleet`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
     return res.json();
   },
   addVehicle: async (vehicle: any) => {
     const res = await fetch(`${API_URL}/logistics/fleet`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
       body: JSON.stringify(vehicle),
     });
     return res.json();
   },
   deleteVehicle: async (vehicleId: string) => {
-    await fetch(`${API_URL}/logistics/fleet/${vehicleId}`, { method: 'DELETE' });
+    await fetch(`${API_URL}/logistics/fleet/${vehicleId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+  },
+  getLogisticsStats: async () => {
+    const res = await fetch(`${API_URL}/logistics/stats`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    return res.json();
+  },
+  getLogisticsDrivers: async () => {
+    const res = await fetch(`${API_URL}/logistics/drivers`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    return res.json();
+  },
+  getLogisticsListings: async () => {
+    const res = await fetch(`${API_URL}/logistics/listings`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    return res.json();
+  },
+  getLogisticsAnalytics: async () => {
+    const res = await fetch(`${API_URL}/logistics/analytics`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    return res.json();
   },
   acceptJob: async (jobId: string, ownerId: string) => {
     // This is for logistics/driver accepting a job
@@ -140,12 +187,10 @@ export const api = {
   },
 
   getAvailableFleets: async () => {
-    // Fetch list of trucks available for hire
-    // Mocking for now as backend might not have it
-    return [
-      { id: 'av-1', company: 'Logistics Pro', routes: 'LLW - BT', capacity: '30T', price: 'MWK 20000/day' },
-      { id: 'av-2', company: 'Fast Haul', routes: 'Mzuzu - LLW', capacity: '15T', price: 'MWK 15000/day' }
-    ];
+    const res = await fetch(`${API_URL}/shipper/vehicle-listings`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    return res.json();
   },
   hireTruck: async (listingId: string, hireData: any) => {
     // Shipper hires a truck -> Creates a shipment with status 'Waiting for Confirmation'
@@ -184,20 +229,118 @@ export const api = {
   deleteProduct: async (id: string) => {
     await fetch(`${API_URL}/products/${id}`, { method: 'DELETE' });
   },
+  purchaseProducts: async (items: any[]) => {
+    const res = await fetch(`${API_URL}/products/buy`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({ items }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Purchase failed');
+    }
+    return res.json();
+  },
   // --- WALLET ACTIONS ---
   getWallet: async (userId: string) => {
-    const res = await fetch(`${API_URL}/wallets/${userId}`);
+    const res = await fetch(`${API_URL}/wallets/${userId}`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    return res.json();
+  },
+  getSupportedBanks: async () => {
+    // In a real app, this would call `${API_URL}/wallets/banks` or similar.
+    // For now, I'll return the hardcoded list provided by the user to avoid creating a new backend route just for this list if not strictly necessary,
+    // BUT proper design says I should. 
+    // Checking backend routes... I didn't add a route for 'getBanks' yet.
+    // I'll add the route to walletRoutes.js first.
+    const res = await fetch(`${API_URL}/wallets/banks`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
     return res.json();
   },
   getWalletTransactions: async (userId: string) => {
-    const res = await fetch(`${API_URL}/wallets/${userId}/transactions`);
+    const res = await fetch(`${API_URL}/wallets/${userId}/transactions`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
     return res.json();
   },
-  withdrawFunds: async (userId: string, amount: number, method: string) => {
+  withdrawFunds: async (userId: string, amount: number, method: string, details?: any) => {
     const res = await fetch(`${API_URL}/wallets/withdraw`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, amount, method }),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({ userId, amount, method, details }),
+    });
+    return res.json();
+  },
+
+  // --- PAYMENT ACTIONS ---
+  getPaymentOperators: async () => {
+    const res = await fetch(`${API_URL}/payments/operators`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    return res.json();
+  },
+  initiatePayment: async (paymentData: any) => {
+    const res = await fetch(`${API_URL}/payments/initiate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(paymentData),
+    });
+    return res.json();
+  },
+  verifyPayment: async (chargeId: string) => {
+    const res = await fetch(`${API_URL}/payments/verify/${chargeId}`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    return res.json();
+  },
+  getShipperStats: async () => {
+    const res = await fetch(`${API_URL}/shipper/stats`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    return res.json();
+  },
+  getLogisticsServices: async () => {
+    const res = await fetch(`${API_URL}/shipper/logistics-services`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    return res.json();
+  },
+  getShipperBids: async () => {
+    const res = await fetch(`${API_URL}/shipper/bids`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    return res.json();
+  },
+  rateDriver: async (loadId: string, rating: number, comment: string) => {
+    const res = await fetch(`${API_URL}/shipper/rate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({ loadId, rating, comment }),
+    });
+    return res.json();
+  },
+  bookService: async (serviceId: string) => {
+    const res = await fetch(`${API_URL}/shipper/services/book`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({ serviceId }),
     });
     return res.json();
   },

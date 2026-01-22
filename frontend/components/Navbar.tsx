@@ -1,8 +1,9 @@
 
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Truck, LogOut, User as UserIcon, Bell, LayoutGrid, Menu } from 'lucide-react';
+import { Truck, LogOut, User as UserIcon, Bell, LayoutGrid, Menu, Moon, Sun } from 'lucide-react';
 import { User } from '../types';
+import { useTheme } from './ThemeContext';
 
 interface NavbarProps {
   user: User | null;
@@ -11,37 +12,46 @@ interface NavbarProps {
 
 const Navbar: React.FC<NavbarProps & { onMenuToggle?: () => void }> = ({ user, onLogout, onMenuToggle }) => {
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
 
   return (
-    <nav className="bg-white border-b border-slate-200 sticky top-0 z-[100] shadow-sm">
+    <nav className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-[100] shadow-sm transition-colors duration-200">
       <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
           <Link to="/" className="flex items-center space-x-2">
             <div className="bg-blue-600 p-2 rounded-lg shadow-md shadow-blue-200">
               <Truck className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
             </div>
-            <span className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">Kwik<span className="text-blue-600">Liner</span></span>
+            <span className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">Kwik<span className="text-blue-600">Liner</span></span>
           </Link>
 
           <div className="flex items-center space-x-3 sm:space-x-6">
-            <Link to="/" className="hidden md:flex items-center text-slate-600 hover:text-blue-600 font-semibold text-sm">
+            {/* Theme Toggle */}
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-full text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors"
+            >
+              {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5 text-amber-400" />}
+            </button>
+
+            <Link to="/" className="hidden md:flex items-center text-slate-600 dark:text-slate-300 hover:text-blue-600 font-semibold text-sm">
               <LayoutGrid className="h-4 w-4 mr-1" /> Marketplace
             </Link>
 
             {user ? (
               <>
-                <Link to="/dashboard" className="hidden sm:block text-slate-600 hover:text-blue-600 font-semibold text-sm px-3 py-2">
+                <Link to="/dashboard" className="hidden sm:block text-slate-600 dark:text-slate-300 hover:text-blue-600 font-semibold text-sm px-3 py-2">
                   Dashboard
                 </Link>
-                <div className="flex items-center space-x-2 sm:space-x-4 pl-2 sm:pl-4 border-l border-slate-200">
+                <div className="flex items-center space-x-2 sm:space-x-4 pl-2 sm:pl-4 border-l border-slate-200 dark:border-slate-700">
                   <button className="text-slate-400 hover:text-blue-600 hidden xs:block">
                     <Bell className="h-5 w-5" />
                   </button>
                   <div className="flex items-center space-x-2">
-                    <div className="h-8 w-8 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center">
-                      <UserIcon className="h-5 w-5 text-blue-600" />
+                    <div className="h-8 w-8 rounded-full bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800/50 flex items-center justify-center">
+                      <UserIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                     </div>
-                    <span className="hidden lg:inline text-sm font-bold text-slate-700">{user.name}</span>
+                    <span className="hidden lg:inline text-sm font-bold text-slate-700 dark:text-slate-200">{user.name}</span>
                   </div>
                   <button onClick={() => { onLogout(); navigate('/'); }} className="p-2 text-slate-400 hover:text-red-500 hidden sm:block" title="Logout">
                     <LogOut className="h-5 w-5" />
@@ -50,7 +60,7 @@ const Navbar: React.FC<NavbarProps & { onMenuToggle?: () => void }> = ({ user, o
                   {/* MOBILE MENU TRIGGER */}
                   <button
                     onClick={onMenuToggle}
-                    className="md:hidden h-10 w-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-all border border-slate-100"
+                    className="md:hidden h-10 w-10 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all border border-slate-100 dark:border-slate-700"
                   >
                     <Menu size={20} />
                   </button>
@@ -58,8 +68,8 @@ const Navbar: React.FC<NavbarProps & { onMenuToggle?: () => void }> = ({ user, o
               </>
             ) : (
               <div className="flex items-center space-x-4">
-                <Link to="/register" className="text-slate-600 hover:text-slate-900 font-bold text-sm">Log In</Link>
-                <Link to="/register" className="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 text-sm">
+                <Link to="/register" state={{ isLogin: true }} className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-bold text-sm">Log In</Link>
+                <Link to="/register" className="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 dark:shadow-blue-900/50 text-sm">
                   Register
                 </Link>
               </div>

@@ -14,6 +14,12 @@ CREATE TABLE IF NOT EXISTS users (
     company_name VARCHAR(255),
     phone VARCHAR(50),
     is_verified BOOLEAN DEFAULT false,
+    verification_token VARCHAR(255),
+    verification_expires_at TIMESTAMP,
+    city VARCHAR(255),
+    location VARCHAR(255),
+    po_box VARCHAR(255),
+    compliance_status VARCHAR(50) DEFAULT 'PENDING',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -65,6 +71,8 @@ CREATE TABLE IF NOT EXISTS shipments (
     order_ref VARCHAR(255),
     pickup_date DATE,
     bidder_ids UUID[], -- Array of drivers who bid
+    driver_rating INTEGER CHECK (driver_rating >= 1 AND driver_rating <= 5),
+    driver_comment TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -78,8 +86,6 @@ CREATE TABLE IF NOT EXISTS bids (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 6. Create Bids Table...
-...
 -- 7. Create Wallets Table (Digital Balance)
 CREATE TABLE IF NOT EXISTS wallets (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

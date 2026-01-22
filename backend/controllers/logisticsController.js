@@ -27,6 +27,42 @@ const logisticsController = {
         } catch (err) {
             res.status(500).json({ error: err.message || 'Failed to delete vehicle' });
         }
+    },
+
+    getStats: async (req, res) => {
+        try {
+            const stats = await logisticsService.getStats(req.user.id);
+            res.json(stats);
+        } catch (err) {
+            res.status(500).json({ error: 'Failed to fetch logistics stats' });
+        }
+    },
+
+    getDrivers: async (req, res) => {
+        try {
+            const drivers = await logisticsService.getDrivers(req.user.id);
+            res.json(drivers);
+        } catch (err) {
+            res.status(500).json({ error: 'Failed to fetch drivers' });
+        }
+    },
+
+    getListings: async (req, res) => {
+        try {
+            const listings = await logisticsService.getListings(req.user.id);
+            res.json(listings);
+        } catch (err) {
+            res.status(500).json({ error: 'Failed to fetch listings' });
+        }
+    },
+
+    getRevenueAnalytics: async (req, res) => {
+        try {
+            const analytics = await logisticsService.getRevenueAnalytics(req.user.id);
+            res.json(analytics);
+        } catch (err) {
+            res.status(500).json({ error: 'Failed to fetch revenue analytics' });
+        }
     }
 };
 

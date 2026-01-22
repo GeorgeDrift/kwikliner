@@ -60,6 +60,16 @@ const driverController = {
         } catch (err) {
             res.status(500).json({ error: 'Failed to fetch trips' });
         }
+    },
+
+    getStats: async (req, res) => {
+        try {
+            const stats = await driverService.getStats(req.user.id);
+            res.json(stats);
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ error: 'Failed to fetch dashboard statistics' });
+        }
     }
 };
 

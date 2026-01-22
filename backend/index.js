@@ -9,6 +9,8 @@ const shipperRoutes = require('./routes/shipperRoutes');
 const driverRoutes = require('./routes/driverRoutes');
 const logisticsRoutes = require('./routes/logisticsRoutes');
 const hardwareRoutes = require('./routes/hardwareRoutes');
+const walletRoutes = require('./routes/walletRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -25,6 +27,9 @@ app.use('/api/shipper', shipperRoutes);
 app.use('/api/driver', driverRoutes);
 app.use('/api/logistics', logisticsRoutes);
 app.use('/api/products', hardwareRoutes);
+app.use('/api/wallets', walletRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/admin', require('./routes/adminRoutes'));
 
 // Health Check
 app.get('/', (req, res) => {

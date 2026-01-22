@@ -12,4 +12,7 @@ router.post('/', authMiddleware, hardwareMiddleware, hardwareController.addProdu
 router.put('/:id', authMiddleware, hardwareMiddleware, hardwareController.updateProduct);
 router.delete('/:id', authMiddleware, hardwareMiddleware, hardwareController.deleteProduct);
 
+// Purchase Route
+router.post('/buy', authMiddleware, hardwareController.purchaseProducts);
+
 module.exports = router;

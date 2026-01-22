@@ -8,6 +8,7 @@ const driverMiddleware = require('../middleware/driverMiddleware');
 router.use(authMiddleware);
 router.use(driverMiddleware);
 
+router.get('/stats', driverController.getStats);
 router.get('/jobs', driverController.getJobs);
 router.post('/availability', driverController.postVehicleListing);
 router.post('/bids', driverController.bidOnLoad);

@@ -11,7 +11,7 @@ interface MarketTabProps {
     handleBookService: (item: any) => void;
     hiringUrgency: Record<string, string>;
     setHiringUrgency: (urgency: any) => void;
-    handleDirectHire: (driverName: string) => void;
+    handleDirectHire: (driverName: string, driverId?: string) => void;
     handleAcceptJob?: (job: any) => void;
     VehicleSlider: React.FC<{ images: string[] }>;
 }
@@ -45,18 +45,18 @@ const MarketTab: React.FC<MarketTabProps> = ({
 
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
-                    <h3 className="text-3xl font-black text-slate-900 tracking-tighter">Kwik Shop</h3>
-                    <p className="text-slate-500 font-medium mt-1 text-sm">Browse the global marketplace. Shop hardware, spares, and gear.</p>
+                    <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">Kwik Shop</h3>
+                    <p className="text-slate-500 dark:text-slate-400 font-medium mt-1 text-sm">Browse the global marketplace. Shop hardware, spares, and gear.</p>
                 </div>
                 <div className="relative flex-grow max-w-2xl">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
-                    <input className="bg-white border border-slate-100 rounded-xl pl-12 pr-6 py-3 text-[11px] font-black uppercase tracking-widest focus:ring-2 focus-within:ring-blue-600 outline-none w-full shadow-sm" placeholder="Search Marketplace..." />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-500" size={16} />
+                    <input className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl pl-12 pr-6 py-3 text-[11px] font-black uppercase tracking-widest focus:ring-2 focus-within:ring-blue-600 outline-none w-full shadow-sm text-slate-900 dark:text-slate-100" placeholder="Search Marketplace..." />
                 </div>
             </div>
 
             <div className="flex flex-wrap gap-4 items-center">
                 {['All', 'Cargo', 'Transport/Logistics', 'Equipment'].map(cat => (
-                    <button key={cat} onClick={() => setMarketFilter(cat)} className={`px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${marketFilter === cat ? 'bg-blue-600 text-white shadow-xl shadow-blue-100' : 'bg-white text-slate-400 border border-slate-100 hover:border-blue-600'}`}>
+                    <button key={cat} onClick={() => setMarketFilter(cat)} className={`px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${marketFilter === cat ? 'bg-blue-600 text-white shadow-xl shadow-blue-100 dark:shadow-none' : 'bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-100 dark:border-slate-700 hover:border-blue-600 dark:hover:border-blue-400'}`}>
                         {cat}
                     </button>
                 ))}
@@ -66,8 +66,8 @@ const MarketTab: React.FC<MarketTabProps> = ({
                 {marketItems.filter(i => {
                     return marketFilter === 'All' || i.cat === marketFilter;
                 }).map((item, idx) => (
-                    <div key={idx} className="bg-white rounded-[32px] p-4 border border-slate-50 shadow-sm hover:shadow-2xl transition-all group">
-                        <div className="h-48 rounded-[24px] overflow-hidden mb-4 relative bg-slate-100">
+                    <div key={idx} className="bg-white dark:bg-slate-800 rounded-[32px] p-4 border border-slate-50 dark:border-slate-700 shadow-sm hover:shadow-2xl transition-all group">
+                        <div className="h-48 rounded-[24px] overflow-hidden mb-4 relative bg-slate-100 dark:bg-slate-900">
                             {item.cat === 'Transport/Logistics' && item.images ? (
                                 <VehicleSlider images={item.images} />
                             ) : (
@@ -78,10 +78,10 @@ const MarketTab: React.FC<MarketTabProps> = ({
                             </div>
                         </div>
                         <div className="px-2 pb-2">
-                            <h4 className="font-black text-slate-900 text-sm line-clamp-1 mb-1">{item.name}</h4>
-                            <p className="text-xs font-bold text-slate-400 mb-2">{item.provider}</p>
-                            <p className="text-xs text-slate-500 mb-2 line-clamp-2">{item.details}</p>
-                            <p className="text-lg font-black text-blue-600 mb-4">{item.priceStr}</p>
+                            <h4 className="font-black text-slate-900 dark:text-slate-100 text-sm line-clamp-1 mb-1">{item.name}</h4>
+                            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 mb-2">{item.provider}</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-2 line-clamp-2">{item.details}</p>
+                            <p className="text-lg font-black text-blue-600 dark:text-blue-400 mb-4">{item.priceStr}</p>
 
                             {item.cat === 'Equipment' ? (
                                 <button onClick={() => addToCart(item)} className="w-full py-3 bg-blue-600 text-white hover:bg-blue-700 rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-blue-100 transition-all">
@@ -96,7 +96,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
                                 </button>
                             ) : item.cat === 'Transport/Logistics' ? ( // Assuming 'Transport/Logistics' items are for hiring
                                 <button
-                                    onClick={() => handleDirectHire(item.provider)} // Changed from driver.provider to item.provider
+                                    onClick={() => handleDirectHire(item.provider, item.driverId)} // Changed from driver.provider to item.provider and added driverId
                                     className={`w-full py-3 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg transition-all hover:scale-[1.02] active:scale-95 touch-manipulation ${(hiringUrgency[idx] || 'standard') === 'urgent' ? 'bg-amber-500 hover:bg-amber-600' : (hiringUrgency[idx] || 'standard') === 'flexible' ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-blue-600 hover:bg-blue-700'}`}
                                 >
                                     Hire • {(hiringUrgency[idx] || 'standard')}
