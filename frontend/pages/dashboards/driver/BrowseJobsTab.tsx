@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, Package, DollarSign, CheckCircle2, Gavel, Clock, X } from 'lucide-react';
+import { MapPin, Package, DollarSign, CheckCircle2, Gavel, Clock, X, Filter, ChevronDown } from 'lucide-react';
 
 interface BrowseJobsTabProps {
     jobs: any[];
@@ -24,6 +24,9 @@ const BrowseJobsTab: React.FC<BrowseJobsTabProps> = ({
     setSelectedJob,
     setIsBidModalOpen
 }) => {
+    const [isLocationDropdownOpen, setIsLocationDropdownOpen] = React.useState(false);
+    const locations = ['All', 'Lilongwe', 'Blantyre', 'Mzuzu', 'Zomba'];
+
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">Job Marketplace</h3>
@@ -36,27 +39,61 @@ const BrowseJobsTab: React.FC<BrowseJobsTabProps> = ({
                         <button onClick={() => setJobsSubTab('Rejected')} className={`px-6 sm:px-8 py-3 sm:py-3.5 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all shrink-0 ${jobsSubTab === 'Rejected' ? 'bg-blue-600 text-white shadow-xl shadow-blue-100 dark:shadow-none' : 'bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-100 dark:border-slate-700'}`}>Rejected</button>
                     </div>
 
-                    {jobsSubTab === 'Market' && (
-                        <div className="flex items-center gap-2 bg-white dark:bg-slate-800 p-1 rounded-xl border border-slate-100 dark:border-slate-700 transition-colors">
-                            <MapPin size={14} className="text-slate-400 ml-2" />
-                            {['All', 'Lilongwe', 'Blantyre', 'Mzuzu', 'Zomba'].map(loc => (
-                                <button
-                                    key={loc}
-                                    onClick={() => setJobsLocationFilter(loc)}
-                                    className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${jobsLocationFilter === loc ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-white'}`}
-                                >
-                                    {loc}
-                                </button>
-                            ))}
-                        </div>
-                    )}
+                    <div className="relative">
+                        <button
+                            onClick={() => setIsLocationDropdownOpen(!isLocationDropdownOpen)}
+                            className="flex items-center gap-3 bg-white dark:bg-slate-800 px-6 py-3 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm hover:border-blue-500 transition-all text-slate-600 dark:text-slate-400"
+                        >
+                            <Filter size={16} className={jobsLocationFilter !== 'All' ? 'text-blue-600' : ''} />
+                            <span className="text-[10px] font-black uppercase tracking-widest">
+                                {jobsLocationFilter === 'All' ? 'Filter Location' : `Location: ${jobsLocationFilter}`}
+                            </span>
+                            <ChevronDown size={14} className={`transition-transform duration-300 ${isLocationDropdownOpen ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {isLocationDropdownOpen && (
+                            <>
+                                <div
+                                    className="fixed inset-0 z-10"
+                                    onClick={() => setIsLocationDropdownOpen(false)}
+                                />
+                                <div className="absolute right-0 mt-3 w-56 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-2xl py-3 z-20 animate-in fade-in zoom-in-95 duration-200">
+                                    <div className="px-4 py-2 border-b border-slate-50 dark:border-slate-700 mb-2">
+                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Select Location</p>
+                                    </div>
+                                    {locations.map(loc => (
+                                        <button
+                                            key={loc}
+                                            onClick={() => {
+                                                setJobsLocationFilter(loc);
+                                                setIsLocationDropdownOpen(false);
+                                            }}
+                                            className={`w-full px-6 py-3 text-left text-xs font-bold transition-all flex items-center justify-between group ${jobsLocationFilter === loc ? 'text-blue-600 bg-blue-50/50 dark:bg-blue-900/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900/40 hover:text-blue-600'}`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <MapPin size={14} className={jobsLocationFilter === loc ? 'text-blue-600' : 'text-slate-300 dark:text-slate-600 group-hover:text-blue-400'} />
+                                                {loc}
+                                            </div>
+                                            {jobsLocationFilter === loc && <div className="h-1.5 w-1.5 rounded-full bg-blue-600" />}
+                                        </button>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+                    </div>
                 </div>
 
                 <div className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {/* If Marketplace, show synchronized Cargo from marketItems, else use jobs state */}
                     {(jobsSubTab === 'Market' ?
-                        marketItems.filter(i => i.cat === 'Cargo' && (jobsLocationFilter === 'All' || i.location.includes(jobsLocationFilter))) :
-                        jobs.filter(j => j.type === jobsSubTab && (jobsLocationFilter === 'All' || j.route.includes(jobsLocationFilter)))
+                        marketItems.filter(i => i.cat === 'Cargo' && (
+                            jobsLocationFilter === 'All' ||
+                            (i.location || '').toLowerCase().includes(jobsLocationFilter.toLowerCase())
+                        )) :
+                        jobs.filter(j => j.type === jobsSubTab && (
+                            jobsLocationFilter === 'All' ||
+                            (j.route || j.location || '').toLowerCase().includes(jobsLocationFilter.toLowerCase())
+                        ))
                     ).map((job: any) => (
                         <div key={job.id} className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-2xl transition-all group">
                             <h4 className="text-xl font-black text-slate-900 dark:text-white mb-2 truncate">{job.name || job.route}</h4>

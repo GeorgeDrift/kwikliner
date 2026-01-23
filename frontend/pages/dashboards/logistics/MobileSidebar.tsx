@@ -4,7 +4,7 @@ import { User } from '../../../types';
 
 interface MobileSidebarProps {
     isOpen: boolean;
-    setIsOpen: (isOpen: boolean) => void;
+    onClose: () => void;
     activeMenu: string;
     setActiveMenu: (menu: string) => void;
     menuSections: any;
@@ -15,7 +15,7 @@ interface MobileSidebarProps {
 
 const MobileSidebar: React.FC<MobileSidebarProps> = ({
     isOpen,
-    setIsOpen,
+    onClose,
     activeMenu,
     setActiveMenu,
     menuSections,
@@ -27,7 +27,7 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
 
     return (
         <div className="fixed inset-0 z-[200] md:hidden">
-            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsOpen(false)}></div>
+            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose}></div>
             <aside className="absolute left-0 top-0 bottom-0 w-80 bg-white flex flex-col p-8 animate-in slide-in-from-left duration-300 shadow-2xl">
                 <div className="flex items-center justify-between mb-10 shrink-0">
                     <div className="flex items-center gap-3">
@@ -36,7 +36,7 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
                         </div>
                         <span className="font-black text-xl tracking-tighter">KwikLiner</span>
                     </div>
-                    <button onClick={() => setIsOpen(false)} className="h-10 w-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400">
+                    <button onClick={onClose} className="h-10 w-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400">
                         <X size={20} />
                     </button>
                 </div>
@@ -54,7 +54,7 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({
                                             else if (item.id === 'Settings') navigate('/settings');
                                             else {
                                                 setActiveMenu(item.id);
-                                                setIsOpen(false);
+                                                onClose();
                                             }
                                         }}
                                         className={`w-full flex items-center justify-between px-6 py-5 rounded-[24px] transition-all group ${activeMenu === item.id ? 'bg-[#6366F1] text-white shadow-2xl shadow-indigo-200' : 'text-slate-500 hover:bg-slate-50'}`}

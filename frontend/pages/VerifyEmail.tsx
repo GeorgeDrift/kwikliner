@@ -1,8 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { CheckCircle, XCircle, Loader2, ArrowRight } from 'lucide-react';
+import { User } from '../types';
 
-const VerifyEmail: React.FC = () => {
+interface VerifyEmailProps {
+    onVerify: (user: User) => void;
+}
+
+const VerifyEmail: React.FC<VerifyEmailProps> = ({ onVerify }) => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
@@ -16,14 +21,11 @@ const VerifyEmail: React.FC = () => {
             return;
         }
 
-        // Use a local variable to prevent double-verification in the same mount cycle
         let isSubscribed = true;
 
         const verifyToken = async () => {
             try {
-                // We add a small delay to allow any other concurrent verify calls to finish or to avoid race conditions
-                // especially in development with StrictMode
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, 800));
 
                 if (!isSubscribed) return;
 
@@ -35,9 +37,19 @@ const VerifyEmail: React.FC = () => {
                 if (response.ok) {
                     setStatus('success');
                     setMessage(data.message);
+
+                    // Auto-login logic
+                    if (data.token && data.user) {
+                        localStorage.setItem('token', data.token);
+                        localStorage.setItem('kwikliner_user', JSON.stringify(data.user));
+                        onVerify(data.user);
+
+                        // Short delay for the user to see the success message
+                        setTimeout(() => {
+                            if (isSubscribed) navigate('/dashboard');
+                        }, 2000);
+                    }
                 } else {
-                    // Check if it was already verified - though backend currently doesn't distinguish
-                    // we can at least show the error more gracefully.
                     setStatus('error');
                     setMessage(data.error || 'Verification failed');
                 }
@@ -54,7 +66,7 @@ const VerifyEmail: React.FC = () => {
         return () => {
             isSubscribed = false;
         };
-    }, [searchParams]);
+    }, [searchParams, onVerify, navigate]);
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4">

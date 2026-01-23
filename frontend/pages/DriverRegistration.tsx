@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
     CheckCircle, ChevronRight, ArrowLeft, ArrowRight,
-    User, Truck, FileText, Shield, Heart, DollarSign, AlertTriangle, BookOpen
+    User, Truck, FileText, Shield, Heart, DollarSign, AlertTriangle, BookOpen, Loader2
 } from 'lucide-react';
 import { UserRole } from '../types';
 import { useToast } from '../components/ToastContext';
@@ -9,9 +9,10 @@ import { useToast } from '../components/ToastContext';
 interface DriverRegistrationProps {
     onComplete: (data: any) => void;
     onBack: () => void;
+    isLoading?: boolean;
 }
 
-const DriverRegistration: React.FC<DriverRegistrationProps> = ({ onComplete, onBack }) => {
+const DriverRegistration: React.FC<DriverRegistrationProps> = ({ onComplete, onBack, isLoading }) => {
     const { addToast } = useToast();
     const [page, setPage] = useState(1);
     const [formData, setFormData] = useState({
@@ -455,10 +456,10 @@ const DriverRegistration: React.FC<DriverRegistrationProps> = ({ onComplete, onB
 
                         <button
                             onClick={handleSubmit}
-                            disabled={!formData.infoAccurate || !formData.agreeTerms || !formData.signature}
-                            className="w-full py-5 bg-slate-900 dark:bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-slate-200 dark:shadow-none hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={!formData.infoAccurate || !formData.agreeTerms || !formData.signature || isLoading}
+                            className="w-full py-5 bg-slate-900 dark:bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-slate-200 dark:shadow-none hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
-                            Submit Application
+                            {isLoading ? <Loader2 className="animate-spin" size={20} /> : 'Submit Application'}
                         </button>
                     </div>
                 );

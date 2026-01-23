@@ -1,6 +1,15 @@
 
 const API_URL = 'http://localhost:5000/api';
 
+// Helper function with timeout
+const fetchWithTimeout = (url: string, options: RequestInit = {}, timeout = 10000): Promise<Response> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  
+  return fetch(url, { ...options, signal: controller.signal })
+    .finally(() => clearTimeout(timeoutId));
+};
+
 export const api = {
   // --- AUTH ---
   login: async (role: string) => {
@@ -15,6 +24,16 @@ export const api = {
       return { id: 'offline', role, name: 'Offline User', isVerified: true };
     }
   },
+
+  loginWithEmail: async (email: string, password: string) => {
+    const res = await fetch(`${API_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    if (!res.ok) throw new Error(`Login failed: ${res.status}`);
+    return res.json();
+  },
   updateProfile: async (id: string, data: any) => {
     const res = await fetch(`${API_URL}/users/${id}`, {
       method: 'PUT',
@@ -26,13 +45,14 @@ export const api = {
 
   // --- SHIPPER ACTIONS ---
   getShipperLoads: async () => {
-    const res = await fetch(`${API_URL}/shipper/loads`, {
+    const res = await fetchWithTimeout(`${API_URL}/shipper/loads`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     });
+    if (!res.ok) throw new Error(`Failed to fetch loads: ${res.status}`);
     return res.json();
   },
   postLoad: async (loadData: any) => {
-    const res = await fetch(`${API_URL}/shipper/loads`, {
+    const res = await fetchWithTimeout(`${API_URL}/shipper/loads`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -40,20 +60,21 @@ export const api = {
       },
       body: JSON.stringify(loadData),
     });
+    if (!res.ok) throw new Error(`Failed to post load: ${res.status}`);
     return res.json();
   },
   getAvailableDrivers: async () => {
     const res = await fetch(`${API_URL}/shipper/drivers`);
+    if (!res.ok) throw new Error(`Failed to fetch drivers: ${res.status}`);
     return res.json();
   },
   getLoadBids: async (loadId: string) => {
-    try {
-      const res = await fetch(`${API_URL}/shipper/loads/${loadId}/bids`);
-      return await res.json();
-    } catch (e) { return []; }
+    const res = await fetchWithTimeout(`${API_URL}/shipper/loads/${loadId}/bids`);
+    if (!res.ok) throw new Error(`Failed to fetch bids: ${res.status}`);
+    return res.json();
   },
   acceptBid: async (loadId: string, bidId: string) => {
-    const res = await fetch(`${API_URL}/shipper/bids/accept`, {
+    const res = await fetchWithTimeout(`${API_URL}/shipper/bids/accept`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -61,28 +82,30 @@ export const api = {
       },
       body: JSON.stringify({ loadId, bidId }),
     });
+    if (!res.ok) throw new Error(`Failed to accept bid: ${res.status}`);
     return res.json();
   },
 
   // --- DRIVER ACTIONS ---
   getAvailableJobs: async () => {
-    try {
-      const res = await fetch(`${API_URL}/driver/jobs`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
-      return await res.json();
-    } catch { return []; }
-  },
-  getDriverTrips: async () => {
-    const res = await fetch(`${API_URL}/driver/trips`, {
+    const res = await fetchWithTimeout(`${API_URL}/driver/jobs`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     });
+    if (!res.ok) throw new Error(`Failed to fetch jobs: ${res.status}`);
+    return res.json();
+  },
+  getDriverTrips: async () => {
+    const res = await fetchWithTimeout(`${API_URL}/driver/trips`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    if (!res.ok) throw new Error(`Failed to fetch trips: ${res.status}`);
     return res.json();
   },
   getDriverStats: async () => {
-    const res = await fetch(`${API_URL}/driver/stats`, {
+    const res = await fetchWithTimeout(`${API_URL}/driver/stats`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     });
+    if (!res.ok) throw new Error(`Failed to fetch stats: ${res.status}`);
     return res.json();
   },
   bidOnLoad: async (loadId: string, bidData: any) => {
@@ -122,9 +145,10 @@ export const api = {
 
   // --- LOGISTICS ACTIONS ---
   getFleet: async (ownerId: string) => {
-    const res = await fetch(`${API_URL}/logistics/${ownerId}/fleet`, {
+    const res = await fetchWithTimeout(`${API_URL}/logistics/${ownerId}/fleet`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     });
+    if (!res.ok) throw new Error(`Failed to fetch fleet: ${res.status}`);
     return res.json();
   },
   addVehicle: async (vehicle: any) => {
@@ -190,6 +214,7 @@ export const api = {
     const res = await fetch(`${API_URL}/shipper/vehicle-listings`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     });
+    if (!res.ok) throw new Error(`Failed to fetch fleets: ${res.status}`);
     return res.json();
   },
   hireTruck: async (listingId: string, hireData: any) => {
@@ -204,11 +229,9 @@ export const api = {
 
   // --- MARKET/HARDWARE ACTIONS ---
   getProducts: async () => {
-    try {
-      const res = await fetch(`${API_URL}/products`);
-      if (!res.ok) throw new Error('Failed');
-      return await res.json();
-    } catch (e) { return []; }
+    const res = await fetchWithTimeout(`${API_URL}/products`);
+    if (!res.ok) throw new Error(`Failed to fetch products: ${res.status}`);
+    return res.json();
   },
   createProduct: async (product: any) => {
     const res = await fetch(`${API_URL}/products`, {
@@ -246,26 +269,24 @@ export const api = {
   },
   // --- WALLET ACTIONS ---
   getWallet: async (userId: string) => {
-    const res = await fetch(`${API_URL}/wallets/${userId}`, {
+    const res = await fetchWithTimeout(`${API_URL}/wallets/${userId}`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     });
+    if (!res.ok) throw new Error(`Failed to fetch wallet: ${res.status}`);
     return res.json();
   },
   getSupportedBanks: async () => {
-    // In a real app, this would call `${API_URL}/wallets/banks` or similar.
-    // For now, I'll return the hardcoded list provided by the user to avoid creating a new backend route just for this list if not strictly necessary,
-    // BUT proper design says I should. 
-    // Checking backend routes... I didn't add a route for 'getBanks' yet.
-    // I'll add the route to walletRoutes.js first.
-    const res = await fetch(`${API_URL}/wallets/banks`, {
+    const res = await fetchWithTimeout(`${API_URL}/wallets/banks`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     });
+    if (!res.ok) throw new Error(`Failed to fetch banks: ${res.status}`);
     return res.json();
   },
   getWalletTransactions: async (userId: string) => {
-    const res = await fetch(`${API_URL}/wallets/${userId}/transactions`, {
+    const res = await fetchWithTimeout(`${API_URL}/wallets/${userId}/transactions`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     });
+    if (!res.ok) throw new Error(`Failed to fetch transactions: ${res.status}`);
     return res.json();
   },
   withdrawFunds: async (userId: string, amount: number, method: string, details?: any) => {
@@ -305,21 +326,24 @@ export const api = {
     return res.json();
   },
   getShipperStats: async () => {
-    const res = await fetch(`${API_URL}/shipper/stats`, {
+    const res = await fetchWithTimeout(`${API_URL}/shipper/stats`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     });
+    if (!res.ok) throw new Error(`Failed to fetch stats: ${res.status}`);
     return res.json();
   },
   getLogisticsServices: async () => {
-    const res = await fetch(`${API_URL}/shipper/logistics-services`, {
+    const res = await fetchWithTimeout(`${API_URL}/shipper/logistics-services`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     });
+    if (!res.ok) throw new Error(`Failed to fetch logistics services: ${res.status}`);
     return res.json();
   },
   getShipperBids: async () => {
-    const res = await fetch(`${API_URL}/shipper/bids`, {
+    const res = await fetchWithTimeout(`${API_URL}/shipper/bids`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     });
+    if (!res.ok) throw new Error(`Failed to fetch bids: ${res.status}`);
     return res.json();
   },
   rateDriver: async (loadId: string, rating: number, comment: string) => {
@@ -344,4 +368,27 @@ export const api = {
     });
     return res.json();
   },
-};
+
+  // --- PUBLIC MARKETPLACE (No Auth Required) ---
+  getPublicCargoListings: async () => {
+    const res = await fetchWithTimeout(`${API_URL}/marketplace/cargo`);
+    if (!res.ok) throw new Error(`Failed to fetch cargo listings: ${res.status}`);
+    const data = await res.json();
+    console.log('[API] Public cargo listings received:', { count: data?.length, data });
+    return data;
+  },
+  getPublicProducts: async () => {
+    const res = await fetchWithTimeout(`${API_URL}/marketplace/products`);
+    if (!res.ok) throw new Error(`Failed to fetch products: ${res.status}`);
+    return res.json();
+  },
+  getPublicVehicleListings: async () => {
+    const res = await fetchWithTimeout(`${API_URL}/marketplace/vehicles`);
+    if (!res.ok) throw new Error(`Failed to fetch vehicle listings: ${res.status}`);
+    return res.json();
+  },
+  getPublicLogisticsServices: async () => {
+    const res = await fetchWithTimeout(`${API_URL}/marketplace/services`);
+    if (!res.ok) throw new Error(`Failed to fetch logistics services: ${res.status}`);
+    return res.json();
+  },};

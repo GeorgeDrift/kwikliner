@@ -8,9 +8,11 @@ import {
   Bell, Plus, ShoppingCart, DollarSign, Tag, Store, Ruler, Square,
   Trash2, Package, Filter, MoreHorizontal, ArrowUpRight,
   CreditCard, PieChart, Image as ImageIcon, X, Edit, Save, CheckCircle2,
-  ChevronRight, BarChart3, TrendingUp, Info, Award, Star, Menu, ArrowRight, Briefcase, AlertCircle
+  ChevronRight, BarChart3, TrendingUp, Info, Award, Star, Menu, ArrowRight, Briefcase, AlertCircle, Gavel
 } from 'lucide-react';
 import ChatWidget from '../../../components/ChatWidget';
+import MarketTab from '../../../components/MarketTab';
+import VehicleSlider from '../../../components/VehicleSlider';
 import { api } from '../../../services/api';
 
 interface HardwareOwnerDashboardProps {
@@ -51,7 +53,7 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
 
   // Kwik Shop Filter States
   const [productFilter, setProductFilter] = useState<'All' | 'Mine'>('All');
-  const [categoryFilter, setCategoryFilter] = useState('All');
+  const [categoryFilter, setCategoryFilter] = useState('Cargo');
   const [locationFilter, setLocationFilter] = useState('All');
 
   useEffect(() => {
@@ -66,165 +68,42 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
 
   const loadProducts = async () => {
     try {
-      const [allProductsData, walletData, transData] = await Promise.all([
-        api.getProducts(),
-        api.getWallet(user.id),
-        api.getWalletTransactions(user.id)
+      const [inventoryData, walletData, transData] = await Promise.all([
+        api.getProducts().catch(() => []),
+        api.getWallet(user.id).catch(() => null),
+        api.getWalletTransactions(user.id).catch(() => []),
       ]);
+
       setWallet(walletData);
       setTransactions(Array.isArray(transData) ? transData : []);
-
-      // If no products from API, use sample data
-      if (!allProductsData || allProductsData.length === 0) {
-        const sampleProducts = [
-          {
-            id: 'prod-1',
-            name: 'Heavy Duty Hydraulic Jack',
-            price: '45000',
-            image: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400',
-            category: 'Hardware',
-            seller: 'KwikParts Ltd',
-            location: 'Lilongwe',
-            ownerId: 'seller-1',
-            stock: 15
-          },
-          {
-            id: 'prod-2',
-            name: 'Industrial Air Compressor',
-            price: '125000',
-            image: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?w=400',
-            category: 'Hardware',
-            seller: 'TechSupply Co',
-            location: 'Blantyre',
-            ownerId: 'seller-2',
-            stock: 8
-          },
-          {
-            id: 'prod-3',
-            name: 'Brake Pad Set - Universal',
-            price: '12500',
-            image: 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=400',
-            category: 'Spares',
-            seller: 'Auto Parts Hub',
-            location: 'Lilongwe',
-            ownerId: 'seller-3',
-            stock: 45
-          },
-          {
-            id: 'prod-4',
-            name: 'LED Work Light 50W',
-            price: '8500',
-            image: 'https://images.unsplash.com/photo-1513128034602-7814ccaddd4e?w=400',
-            category: 'Tech',
-            seller: 'Bright Solutions',
-            location: 'Mzuzu',
-            ownerId: 'seller-4',
-            stock: 32
-          },
-          {
-            id: 'prod-5',
-            name: 'Engine Oil Filter Kit',
-            price: '6000',
-            image: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?w=400',
-            category: 'Spares',
-            seller: 'MotoShop MW',
-            location: 'Blantyre',
-            ownerId: 'seller-5',
-            stock: 120
-          },
-          {
-            id: 'prod-6',
-            name: 'Safety Reflective Vest',
-            price: '3500',
-            image: 'https://images.unsplash.com/photo-1605408499391-6368c628ef42?w=400',
-            category: 'Safety',
-            seller: 'SafetyFirst Ltd',
-            location: 'Zomba',
-            ownerId: 'seller-6',
-            stock: 200
-          },
-          {
-            id: 'prod-7',
-            name: 'Digital Tire Pressure Gauge',
-            price: '4800',
-            image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400',
-            category: 'Tech',
-            seller: 'GadgetWorld',
-            location: 'Lilongwe',
-            ownerId: 'seller-7',
-            stock: 55
-          },
-          {
-            id: 'prod-8',
-            name: 'Heavy Duty Battery 12V',
-            price: '28000',
-            image: 'https://images.unsplash.com/photo-1609301244239-c8e965e0eb2b?w=400',
-            category: 'Spares',
-            seller: 'PowerPlus',
-            location: 'Blantyre',
-            ownerId: user.id, // This one belongs to the current user
-            stock: 18
-          },
-          {
-            id: 'prod-9',
-            name: 'Fertilizer 50kg Bag',
-            price: '35000',
-            image: 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=400',
-            category: 'Agri',
-            seller: 'AgriSupplies MW',
-            location: 'Mzuzu',
-            ownerId: 'seller-8',
-            stock: 75
-          },
-          {
-            id: 'prod-10',
-            name: 'Steel Toolbox Set',
-            price: '22000',
-            image: 'https://images.unsplash.com/photo-1530124566582-a618bc2615dc?w=400',
-            category: 'Hardware',
-            seller: 'ToolMaster',
-            location: 'Zomba',
-            ownerId: user.id, // Another user product
-            stock: 12
-          },
-          {
-            id: 'prod-11',
-            name: 'Protective Goggles',
-            price: '2500',
-            image: 'https://images.unsplash.com/photo-1577071835592-dea7215c0992?w=400',
-            category: 'Safety',
-            seller: 'WorkSafe Pro',
-            location: 'Lilongwe',
-            ownerId: 'seller-9',
-            stock: 150
-          },
-          {
-            id: 'prod-12',
-            name: 'Portable Generator 5KVA',
-            price: '185000',
-            image: 'https://images.unsplash.com/photo-1521714161819-15534968fc5f?w=400',
-            category: 'Hardware',
-            seller: 'PowerGen Ltd',
-            location: 'Blantyre',
-            ownerId: 'seller-10',
-            stock: 6
-          }
-        ];
-        setAllProducts(sampleProducts);
-        setInventory(sampleProducts.filter((p: any) => p.ownerId === user.id));
-      } else {
-        setAllProducts(allProductsData);
-        setInventory(allProductsData.filter((p: any) => p.ownerId === user.id));
-      }
+      setInventory(inventoryData.filter((p: any) => p.ownerId === user.id || p.seller_id === user.id));
     } catch (error) {
       console.error('Error loading products:', error);
-      // Set empty arrays on error
-      setAllProducts([]);
-      setInventory([]);
-      setWallet(null);
-      setTransactions([]);
     }
   };
+
+  useEffect(() => {
+    loadProducts();
+
+    // Socket Integration
+    const { io } = require('socket.io-client');
+    const newSocket = io('http://localhost:5000');
+
+    newSocket.on('connect', () => {
+      console.log('Hardware Socket Connected');
+      newSocket.emit('join_room', user.id);
+      newSocket.emit('request_market_data');
+    });
+
+    newSocket.on('market_data_update', (data: any[]) => {
+      console.log('Hardware Socket: Received unified market data', data.length);
+      setAllProducts(data);
+    });
+
+    return () => {
+      newSocket.disconnect();
+    };
+  }, [user.id]);
 
   const deleteItem = async (id: string) => {
     if (window.confirm('Are you sure you want to remove this item from your inventory?')) {
@@ -510,124 +389,27 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
         );
 
       case 'Market':
-        const displayProducts = productFilter === 'Mine' ? inventory : allProducts;
-        const filteredProducts = displayProducts.filter(p => {
-          const matchesCategory = categoryFilter === 'All' || p.category === categoryFilter;
-          const matchesLocation = locationFilter === 'All' || p.location === locationFilter;
-          return matchesCategory && matchesLocation;
-        });
-
         return (
-          <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-500 relative">
-            {/* Cart Trigger */}
-            <div className="fixed bottom-24 right-4 sm:bottom-32 sm:right-8 z-[60]">
-              <button onClick={() => setIsCartOpen(true)} className="h-14 w-14 sm:h-20 sm:w-20 bg-blue-600 text-white rounded-full shadow-2xl flex items-center justify-center relative hover:scale-110 active:scale-95 transition-all">
-                <ShoppingCart size={24} className="sm:size-[32px]" />
-                {cart.length > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] sm:text-xs font-black h-6 w-6 sm:h-8 sm:w-8 rounded-full flex items-center justify-center border-4 border-white">
-                    {cart.reduce((a, b) => a + b.quantity, 0)}
-                  </span>
-                )}
-              </button>
-            </div>
-
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-              <div>
-                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tighter">Kwik Shop</h3>
-                <p className="text-slate-500 font-medium mt-1 text-xs sm:text-sm">Browse the global marketplace. Manage your products or shop from others.</p>
-              </div>
-              <div className="relative flex-grow w-full md:max-w-2xl">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
-                <input className="bg-white border border-slate-100 rounded-xl pl-12 pr-6 py-3 text-[10px] sm:text-[11px] font-black uppercase tracking-widest focus:ring-2 focus:ring-blue-600 outline-none w-full shadow-sm" placeholder="Search Marketplace..." />
-              </div>
-            </div>
-
-            {/* Location Filter */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-              <span className="text-sm font-bold text-slate-600">Filter by Location:</span>
-              <div className="w-full sm:w-auto">
-                <select
-                  value={locationFilter}
-                  onChange={(e) => setLocationFilter(e.target.value)}
-                  className="w-full sm:w-auto px-6 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-black uppercase tracking-widest focus:ring-2 focus:ring-blue-600 outline-none cursor-pointer hover:border-blue-600 transition-colors"
-                >
-                  <option value="All">All Locations</option>
-                  <option value="Lilongwe">Lilongwe</option>
-                  <option value="Blantyre">Blantyre</option>
-                  <option value="Mzuzu">Mzuzu</option>
-                  <option value="Zomba">Zomba</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Product Filter Tabs */}
-            <div className="flex flex-wrap gap-4 items-center">
-              <button
-                onClick={() => setProductFilter('All')}
-                className={`px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${productFilter === 'All' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100' : 'bg-white text-slate-400 border border-slate-100 hover:border-indigo-600'}`}
-              >
-                All Products
-              </button>
-              <button
-                onClick={() => setProductFilter('Mine')}
-                className={`px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${productFilter === 'Mine' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100' : 'bg-white text-slate-400 border border-slate-100 hover:border-indigo-600'}`}
-              >
-                My Products ({inventory.length})
-              </button>
-            </div>
-
-            {/* Category Filters */}
-            <div className="flex flex-wrap gap-2 sm:gap-4 items-center overflow-x-auto pb-2 scrollbar-hide">
-              {['All', 'Hardware', 'Spares', 'Agri', 'Tech', 'Safety'].map(cat => (
-                <button key={cat} onClick={() => setCategoryFilter(cat)} className={`flex-shrink-0 px-6 sm:px-8 py-2 sm:py-3 rounded-xl sm:rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${categoryFilter === cat ? 'bg-blue-600 text-white shadow-xl shadow-blue-100' : 'bg-white text-slate-400 border border-slate-100 hover:border-blue-600'}`}>
-                  {cat}
-                </button>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {filteredProducts.map((item, idx) => {
-                const isMine = item.ownerId === user.id;
-                return (
-                  <div key={idx} className="bg-white rounded-[32px] p-4 border border-slate-50 shadow-sm hover:shadow-2xl transition-all group">
-                    <div className="h-48 rounded-[24px] overflow-hidden mb-4 relative bg-slate-100">
-                      <img src={item.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform" alt={item.name} />
-                      <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-3 py-1 rounded-lg text-[11px] font-black text-blue-600 uppercase tracking-widest">
-                        {item.category || 'Hardware'}
-                      </div>
-                      {isMine && (
-                        <div className="absolute top-3 right-3 bg-indigo-600 text-white px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest">
-                          Your Product
-                        </div>
-                      )}
-                    </div>
-                    <div className="px-2 pb-2">
-                      <div className="flex justify-between items-start mb-1">
-                        <h4 className="font-black text-slate-900 text-sm line-clamp-1">{item.name}</h4>
-                      </div>
-                      <p className="text-lg font-black text-blue-600 mb-4">MWK {Number(item.price).toLocaleString()}</p>
-
-                      {isMine ? (
-                        <button
-                          onClick={() => setEditingItem(item)}
-                          className="w-full py-3 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all"
-                        >
-                          <Edit size={14} /> Edit Listing
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => addToCart(item)}
-                          className="w-full py-3 bg-blue-600 text-white hover:bg-blue-700 rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-blue-100 transition-all"
-                        >
-                          <ShoppingCart size={14} /> Add to Cart
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <MarketTab
+            setIsCartOpen={setIsCartOpen}
+            cart={cart}
+            marketFilter={categoryFilter}
+            setMarketFilter={(cat) => {
+              setCategoryFilter(cat);
+              setProductFilter('All'); // Reset product filter when changing category
+            }}
+            marketItems={allProducts}
+            addToCart={addToCart}
+            userId={user.id}
+            productFilter={productFilter}
+            setProductFilter={setProductFilter}
+            inventoryCount={inventory.length}
+            onEditItem={(item) => setEditingItem(item)}
+            handleAcceptJob={() => {
+              alert("Interested in this load? Contact the shipper via messages.");
+              setActiveMenu('Messages');
+            }}
+          />
         );
 
       case 'Analytics':
@@ -823,7 +605,7 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
       case 'Messages':
         return (
           <div className="h-[calc(100vh-140px)] animate-in fade-in duration-500">
-            <ChatWidget currentUser={user} onClose={() => setActiveMenu('Overview')} />
+            <ChatWidget user={user} />
           </div>
         );
       case 'Wallet':

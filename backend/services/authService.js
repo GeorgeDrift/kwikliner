@@ -57,11 +57,24 @@ const authService = {
             [user.id]
         );
 
-        // NOTE: We don't clear the token immediately to allow for idempotency
-        // (e.g. if the user clicks twice or React StrictMode calls this twice).
-        // It will be cleared later or just ignored since is_verified is now true.
+        const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [user.id]);
+        const fullUser = userResult.rows[0];
+        const tokenGenerated = jwt.sign({ id: fullUser.id, role: fullUser.role }, JWT_SECRET, { expiresIn: '24h' });
 
-        return { message: 'Email verified successfully. You can now log in.' };
+        return {
+            message: 'Email verified successfully. You are now logged in.',
+            token: tokenGenerated,
+            user: {
+                id: fullUser.id,
+                role: fullUser.role,
+                name: fullUser.name,
+                email: fullUser.email,
+                phone: fullUser.phone,
+                companyName: fullUser.company_name,
+                isVerified: fullUser.is_verified,
+                complianceStatus: fullUser.compliance_status
+            }
+        };
     },
 
     resendVerification: async (email) => {

@@ -21,8 +21,8 @@ import AccountTab from './AccountTab';
 import SettingsTab from './SettingsTab';
 import WalletTab from './WalletTab';
 import MessageTab from './MessageTab';
-import MarketTab from '../shipper/MarketTab';
-import VehicleSlider from '../shipper/VehicleSlider';
+import MarketTab from '../../../components/MarketTab';
+import VehicleSlider from '../../../components/VehicleSlider';
 
 // Sidebar & Modals
 import Sidebar from './Sidebar';
@@ -51,7 +51,7 @@ const LogisticsOwnerDashboard = ({ user, onLogout, mobileMenuAction }: Logistics
   const [isBidModalOpen, setIsBidModalOpen] = useState(false);
   const [biddingLoad, setBiddingLoad] = useState<any>(null);
   const [bidAmount, setBidAmount] = useState('');
-  const [marketFilter, setMarketFilter] = useState('All');
+  const [marketFilter, setMarketFilter] = useState('Cargo');
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [cart, setCart] = useState<any[]>([]);
   const [hiringUrgency, setHiringUrgency] = useState<Record<string, string>>({});
@@ -66,37 +66,7 @@ const LogisticsOwnerDashboard = ({ user, onLogout, mobileMenuAction }: Logistics
   const [marketProducts, setMarketProducts] = useState<any[]>([]);
   const [analytics, setAnalytics] = useState<any[]>([]);
 
-  const marketItems = useMemo(() => {
-    const fleets = availableFleets.map(f => ({
-      id: f.id,
-      name: f.vehicle_type,
-      cat: 'Transport/Logistics',
-      type: 'Transport',
-      price: 0,
-      priceStr: `MWK ${f.price}/trip`,
-      img: (f.images && f.images[0]) || 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&q=80&w=400',
-      images: f.images || [],
-      location: f.location,
-      provider: f.driver_name,
-      details: `Route: ${f.route}`,
-      capacity: f.capacity
-    }));
 
-    const products = marketProducts.map(p => ({
-      id: p.id,
-      name: p.name,
-      cat: 'Equipment',
-      type: 'Hardware',
-      price: parseFloat(p.price),
-      priceStr: `MWK ${parseFloat(p.price).toLocaleString()}`,
-      img: (p.images && p.images[0]) || 'https://images.unsplash.com/photo-1544006659-f0b21f04cb1d?auto=format&fit=crop&q=80&w=400',
-      location: 'KwikShop',
-      provider: p.seller || 'Verified Seller',
-      details: p.description
-    }));
-
-    return [...fleets, ...products];
-  }, [availableFleets, marketProducts]);
 
 
 
@@ -120,14 +90,7 @@ const LogisticsOwnerDashboard = ({ user, onLogout, mobileMenuAction }: Logistics
     }
   }, [mobileMenuAction]);
 
-  useEffect(() => {
-    loadFleet();
-  }, []);
 
-  const loadFleet = async () => {
-    const data = await api.getFleet(user.id);
-    setFleet(data);
-  };
 
   // Drivers State
   const [drivers, setDrivers] = useState<any[]>([]);
@@ -157,49 +120,41 @@ const LogisticsOwnerDashboard = ({ user, onLogout, mobileMenuAction }: Logistics
 
   const [jobProposals, setJobProposals] = useState<any[]>([]);
 
+  const marketItems = useMemo(() => {
+    return availableFleets; // This will hold the socket data from marketplace_items
+  }, [availableFleets]);
+
   const [wallet, setWallet] = useState<any>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
 
   const loadData = async () => {
     try {
       const [
-        allJobs,
         allTrips,
         walletData,
         transData,
         logisticsStats,
         logisticsDrivers,
         logisticsListings,
-        fleets,
-        products,
         logisticsAnalytics
       ] = await Promise.all([
-        api.getAvailableJobs(),
-        api.getDriverTrips(),
-        api.getWallet(user.id),
-        api.getWalletTransactions(user.id),
-        api.getLogisticsStats(),
-        api.getLogisticsDrivers(),
-        api.getLogisticsListings(),
-        api.getAvailableFleets(),
-        api.getProducts(),
-        api.getLogisticsAnalytics()
+        api.getDriverTrips().catch(() => []),
+        api.getWallet(user.id).catch(() => ({})),
+        api.getWalletTransactions(user.id).catch(() => []),
+        api.getLogisticsStats().catch(() => ({})),
+        api.getLogisticsDrivers().catch(() => []),
+        api.getLogisticsListings().catch(() => []),
+        api.getLogisticsAnalytics().catch(() => [])
       ]);
 
       setWallet(walletData);
       setTransactions(Array.isArray(transData) ? transData : []);
+
       setStats(logisticsStats);
       setDrivers(logisticsDrivers);
       setListings(logisticsListings);
-      setAvailableFleets(fleets);
-      setMarketProducts(products);
       setAnalytics(logisticsAnalytics);
 
-      setJobProposals((Array.isArray(allJobs) ? allJobs : []).map((j: any) => ({
-        ...j,
-        deadline: '2 days',
-        status: 'New'
-      })));
       setAcceptedJobs((Array.isArray(allTrips) ? allTrips : []).map((j: any) => ({
         ...j,
         assignedDriver: j.assigned_driver_id || null
@@ -211,9 +166,26 @@ const LogisticsOwnerDashboard = ({ user, onLogout, mobileMenuAction }: Logistics
 
   useEffect(() => {
     loadData();
-    const interval = setInterval(loadData, 10000);
-    return () => clearInterval(interval);
-  }, []);
+
+    // Socket Integration
+    const { io } = require('socket.io-client');
+    const newSocket = io('http://localhost:5000');
+
+    newSocket.on('connect', () => {
+      console.log('Logistics Socket Connected');
+      newSocket.emit('join_room', user.id);
+      newSocket.emit('request_market_data');
+    });
+
+    newSocket.on('market_data_update', (data: any[]) => {
+      console.log('Logistics Socket: Received unified market data', data.length);
+      setAvailableFleets(data);
+    });
+
+    return () => {
+      newSocket.disconnect();
+    };
+  }, [user.id]);
 
 
   const [acceptedJobs, setAcceptedJobs] = useState<any[]>([]);
@@ -312,13 +284,13 @@ const LogisticsOwnerDashboard = ({ user, onLogout, mobileMenuAction }: Logistics
     setIsAddVehicleOpen(false);
     setNewVehicle({ make: '', model: '', plate: '', capacity: '', type: 'Flatbed' });
     setSelectedImage(null);
-    loadFleet();
+    loadData();
   };
 
   const handleDeleteVehicle = async (id: string) => {
     if (window.confirm('Are you sure you want to remove this vehicle from your fleet?')) {
       await api.deleteVehicle(id);
-      loadFleet();
+      loadData();
     }
   };
 
@@ -373,24 +345,8 @@ const LogisticsOwnerDashboard = ({ user, onLogout, mobileMenuAction }: Logistics
             cart={cart}
             marketFilter={marketFilter}
             setMarketFilter={setMarketFilter}
-            marketItems={[
-              ...marketItems.filter(i => i.cat !== 'Cargo'),
-              ...jobProposals.map(jp => ({
-                id: jp.id,
-                name: jp.cargo,
-                cat: 'Cargo',
-                type: 'Cargo',
-                price: 0,
-                priceStr: jp.price,
-                img: jp.img || 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&w=400',
-                location: jp.route || `${jp.origin} → ${jp.destination}`,
-                provider: jp.shipper || jp.shipperId,
-                details: jp.details || 'Verified Shipper Request',
-                weight: jp.weight
-              }))
-            ]}
+            marketItems={marketItems}
             addToCart={addToCart}
-            VehicleSlider={VehicleSlider}
             handleBookService={(service) => alert(`Service Booked: ${service.name} from ${service.provider}`)}
             hiringUrgency={hiringUrgency}
             setHiringUrgency={setHiringUrgency}
@@ -428,7 +384,7 @@ const LogisticsOwnerDashboard = ({ user, onLogout, mobileMenuAction }: Logistics
       <Sidebar activeMenu={activeMenu} setActiveMenu={setActiveMenu} menuSections={menuSections} onLogout={onLogout} />
       <MobileSidebar
         isOpen={isMobileMenuOpen}
-        setIsOpen={setIsMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
         activeMenu={activeMenu}
         setActiveMenu={setActiveMenu}
         menuSections={menuSections}

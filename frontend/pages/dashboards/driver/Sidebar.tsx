@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Truck, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../../../components/ThemeContext';
 
@@ -19,6 +20,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ activeMenu, setActiveMenu, menuSections, user, onLogout }) => {
     const { theme, toggleTheme } = useTheme();
+    const navigate = useNavigate();
 
     return (
         <aside className="hidden md:flex w-64 bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800 flex-col p-6 shrink-0 h-screen sticky top-0 overflow-hidden transition-colors duration-200">
@@ -44,7 +46,14 @@ const Sidebar: React.FC<SidebarProps> = ({ activeMenu, setActiveMenu, menuSectio
                             {items.map(item => (
                                 <button
                                     key={item.id}
-                                    onClick={() => item.id === 'Logout' ? onLogout() : setActiveMenu(item.id)}
+                                    onClick={() => {
+                                        if (item.id === 'Logout') {
+                                            onLogout();
+                                            navigate('/');
+                                        } else {
+                                            setActiveMenu(item.id);
+                                        }
+                                    }}
                                     className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all group ${activeMenu === item.id
                                             ? 'bg-blue-600 text-white shadow-xl shadow-blue-200 dark:shadow-none'
                                             : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'

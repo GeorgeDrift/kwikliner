@@ -11,7 +11,7 @@ interface OverviewTabProps {
     };
     user: any;
     setIsPostModalOpen: (open: boolean) => void;
-    handleDebugDriverConfirm: () => void;
+    handleDebugDriverConfirm: (id?: string) => void;
     handlePayDeposit: (id: string) => void;
 }
 
@@ -25,7 +25,16 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
 }) => {
     const totalShipments = stats.totalShipments;
     const totalSpend = stats.totalSpend;
-    const activeCount = stats.activeShipments;
+
+    // Filter for truly active shipments (those with a driver assigned)
+    const trulyActiveShipments = useMemo(() =>
+        shipmentsData.Active.filter((s: any) =>
+            (s.driver_id || s.assigned_driver_id) &&
+            ['Waiting for Driver Commitment', 'Pending Deposit', 'Active (Waiting Delivery)', 'In Transit', 'Ready for Pickup', 'Approved / Waiting Pick up'].includes(s.status)
+        ),
+        [shipmentsData.Active]);
+
+    const activeCount = trulyActiveShipments.length;
     const growthVal = stats.growth;
 
     const inventoryMix = useMemo(() => {
@@ -47,7 +56,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         })).sort((a, b) => b.pct - a.pct);
     }, [shipmentsData]);
 
-    const activeShipment = shipmentsData.Active[0];
+    const activeShipment = trulyActiveShipments[0];
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -128,7 +137,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
                                                     <p className="text-xs font-bold text-slate-900 dark:text-white">{activeShipment?.orderRef}</p>
                                                 </div>
                                             )}
-                                            <button onClick={handleDebugDriverConfirm} className="px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all border border-slate-200 dark:border-slate-600">
+                                            <button onClick={() => activeShipment && handleDebugDriverConfirm(activeShipment.id)} className="px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all border border-slate-200 dark:border-slate-600">
                                                 Debug: Force Confirm
                                             </button>
                                         </div>

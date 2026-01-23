@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, MapPin, Package, Box, Tag, Info } from 'lucide-react';
+import { X, MapPin, Package, Box, Tag, Info, Calendar, Image as ImageIcon } from 'lucide-react';
 
 interface NewShipment {
     origin: string;
@@ -11,6 +11,9 @@ interface NewShipment {
     pickupType: 'Standard' | 'Shop Pickup';
     orderRef: string;
     paymentTiming: 'Deposit' | 'Full on Delivery';
+    pickupDate: string;
+    images: string[];
+    quantity: string;
 }
 
 interface PostShipmentModalProps {
@@ -31,19 +34,19 @@ const PostShipmentModal: React.FC<PostShipmentModalProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 overflow-y-auto">
             <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose}></div>
-            <div className="bg-white w-full max-w-lg rounded-[40px] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-300">
-                <div className="p-8 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
+            <div className="bg-white w-full max-w-lg rounded-[40px] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-300 my-8">
+                <div className="p-8 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center shrink-0">
                     <div>
                         <h3 className="text-xl font-black text-slate-900 tracking-tight">Post New Shipment</h3>
                         <p className="text-xs font-bold text-slate-400 mt-1">Drivers will bid on your request.</p>
                     </div>
-                    <button onClick={onClose} className="h-8 w-8 rounded-full bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors">
+                    <button onClick={onClose} className="h-8 w-8 rounded-full bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors shrink-0">
                         <X size={16} />
                     </button>
                 </div>
-                <form onSubmit={handlePostShipment} className="p-6 sm:p-8 space-y-6">
+                <form onSubmit={handlePostShipment} className="p-6 sm:p-8 space-y-6 max-h-[calc(100vh-200px)] overflow-y-auto">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Origin City</label>
@@ -70,7 +73,19 @@ const PostShipmentModal: React.FC<PostShipmentModalProps> = ({
                             </div>
                         </div>
                     </div>
-
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Preferred Pickup Date</label>
+                        <div className="bg-slate-50 rounded-2xl px-4 py-3 border border-slate-100 focus-within:ring-2 focus-within:ring-blue-600/20 focus-within:border-blue-600 transition-all flex items-center gap-3">
+                            <Calendar size={16} className="text-slate-400" />
+                            <input
+                                type="date"
+                                className="bg-transparent w-full text-sm font-bold text-slate-900 outline-none"
+                                value={newShipment.pickupDate}
+                                onChange={e => setNewShipment({ ...newShipment, pickupDate: e.target.value })}
+                                min={new Date().toISOString().split('T')[0]}
+                            />
+                        </div>
+                    </div>
                     <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Cargo Details</label>
                         <div className="bg-slate-50 rounded-2xl px-4 py-3 border border-slate-100 focus-within:ring-2 focus-within:ring-blue-600/20 focus-within:border-blue-600 transition-all flex items-center gap-3">
@@ -98,7 +113,19 @@ const PostShipmentModal: React.FC<PostShipmentModalProps> = ({
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Weight (Tons)</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Quantity / Amount</label>
+                            <div className="bg-slate-50 rounded-2xl px-4 py-3 border border-slate-100 focus-within:ring-2 focus-within:ring-blue-600/20 focus-within:border-blue-600 transition-all flex items-center gap-3">
+                                <Tag size={16} className="text-slate-400" />
+                                <input
+                                    className="bg-transparent w-full text-sm font-bold text-slate-900 outline-none placeholder:text-slate-300"
+                                    placeholder="e.g. 40 Bags"
+                                    value={newShipment.quantity}
+                                    onChange={e => setNewShipment({ ...newShipment, quantity: e.target.value })}
+                                />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Weight (Tons) - optional</label>
                             <div className="bg-slate-50 rounded-2xl px-4 py-3 border border-slate-100 focus-within:ring-2 focus-within:ring-blue-600/20 focus-within:border-blue-600 transition-all flex items-center gap-3">
                                 <Box size={16} className="text-slate-400" />
                                 <input
@@ -192,8 +219,65 @@ const PostShipmentModal: React.FC<PostShipmentModalProps> = ({
                         </div>
                     </div>
 
-                    <div className="pt-4">
-                        <button type="submit" className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl shadow-blue-100 hover:scale-[1.02] active:scale-95 transition-all">
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-center px-1">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cargo Images (Max 3)</label>
+                            <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">{newShipment.images.length}/3</span>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-4">
+                            {newShipment.images.map((img, idx) => (
+                                <div key={idx} className="relative group aspect-square rounded-2xl overflow-hidden border border-slate-100 bg-slate-50">
+                                    <img src={img} className="w-full h-full object-cover" alt={`Cargo ${idx + 1}`} />
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const updated = [...newShipment.images];
+                                            updated.splice(idx, 1);
+                                            setNewShipment({ ...newShipment, images: updated });
+                                        }}
+                                        className="absolute top-2 right-2 h-6 w-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100"
+                                    >
+                                        <X size={12} />
+                                    </button>
+                                </div>
+                            ))}
+
+                            {newShipment.images.length < 3 && (
+                                <label className="aspect-square rounded-2xl border-2 border-dashed border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition-all flex flex-col items-center justify-center cursor-pointer text-slate-400 hover:text-blue-500 gap-2">
+                                    <ImageIcon size={24} />
+                                    <span className="text-[9px] font-black uppercase tracking-tight">Add Photo</span>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) {
+                                                const reader = new FileReader();
+                                                reader.onloadend = () => {
+                                                    setNewShipment({
+                                                        ...newShipment,
+                                                        images: [...newShipment.images, reader.result as string]
+                                                    });
+                                                };
+                                                reader.readAsDataURL(file);
+                                            }
+                                        }}
+                                    />
+                                </label>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="pt-4 sticky bottom-0 bg-white">
+                        <button 
+                            type="submit" 
+                            onClick={(e) => {
+                                e.preventDefault();
+                                handlePostShipment(e as any);
+                            }}
+                            className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl shadow-blue-100 hover:scale-[1.02] active:scale-95 transition-all">
                             Post For Bidding
                         </button>
                     </div>

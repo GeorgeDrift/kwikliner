@@ -16,11 +16,11 @@ interface AdminDashboardProps {
 const MOCK_USERS = [
     { id: '1', name: 'John Shipper', role: 'SHIPPER', status: 'ACTIVE', earnings: 0 },
     { id: '2', name: 'Musa Driver', role: 'DRIVER', status: 'ACTIVE', earnings: 450000 },
-    { id: '3', name: 'Fleet Dynamics', role: 'FLEET_OWNER', status: 'ACTIVE', earnings: 1250000 },
+    { id: '3', name: 'Fleet Dynamics', role: 'LOGISTICS_OWNER', status: 'ACTIVE', earnings: 1250000 },
     { id: '4', name: 'Bad Actor', role: 'DRIVER', status: 'SUSPENDED', earnings: 12000 },
     { id: '5', name: 'KwikSpares', role: 'HARDWARE_OWNER', status: 'ACTIVE', earnings: 89000 },
     { id: '6', name: 'Speedy Construction', role: 'SHIPPER', status: 'ACTIVE', earnings: 0 },
-    { id: '7', name: 'City Logistics', role: 'FLEET_OWNER', status: 'ACTIVE', earnings: 3200000 },
+    { id: '7', name: 'City Logistics', role: 'LOGISTICS_OWNER', status: 'ACTIVE', earnings: 3200000 },
 ];
 
 const MOCK_TRANSACTIONS = [
@@ -248,7 +248,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                                                 <td className="p-4">
                                                     <span className={`px-2 py-1 text-[10px] font-black uppercase rounded-lg ${u.role === 'DRIVER' ? 'bg-blue-100 text-blue-700' :
                                                         u.role === 'SHIPPER' ? 'bg-orange-100 text-orange-700' :
-                                                            u.role === 'FLEET_OWNER' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-700'
+                                                            u.role === 'LOGISTICS_OWNER' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-700'
                                                         }`}>
                                                         {u.role ? u.role.replace('_', ' ') : 'USER'}
                                                     </span>

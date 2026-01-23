@@ -3,7 +3,7 @@ import { MoreHorizontal, Star } from 'lucide-react';
 
 interface ShipmentsTabProps {
     loadsSubTab: string;
-    setLoadsSubTab: (tab: string) => void;
+    setLoadsSubTab: (tab: 'Active' | 'History' | 'Rejected' | 'Completed') => void;
     shipmentsData: any;
 }
 
@@ -14,11 +14,8 @@ const ShipmentsTab: React.FC<ShipmentsTabProps> = ({
 }) => {
     const currentData = loadsSubTab === 'Active'
         ? shipmentsData.Active.filter((s: any) =>
-            s.status === 'In Transit' ||
-            s.status === 'Approved / Waiting Pick up' ||
-            s.status === 'Waiting for Driver Commitment' ||
-            s.status === 'Pending Deposit' ||
-            s.status === 'Active (Waiting Delivery)'
+            (s.driver_id || s.assigned_driver_id) &&
+            ['In Transit', 'Approved / Waiting Pick up', 'Waiting for Driver Commitment', 'Pending Deposit', 'Active (Waiting Delivery)', 'Ready for Pickup'].includes(s.status)
         )
         : (shipmentsData[loadsSubTab] || []);
 
@@ -36,7 +33,7 @@ const ShipmentsTab: React.FC<ShipmentsTabProps> = ({
                         {['Accepted', 'Rejected', 'Completed', 'History'].map(t => (
                             <button
                                 key={t}
-                                onClick={() => setLoadsSubTab(t === 'Accepted' ? 'Active' : t)}
+                                onClick={() => setLoadsSubTab((t === 'Accepted' ? 'Active' : t) as 'Active' | 'History' | 'Rejected' | 'Completed')}
                                 className={`px-6 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest cursor-pointer transition-all ${((loadsSubTab === 'Active' && t === 'Accepted') || loadsSubTab === t) ? 'bg-blue-600 text-white shadow-lg shadow-blue-100 dark:shadow-none' : 'bg-white dark:bg-slate-700 text-slate-400 dark:text-slate-300 border border-slate-100 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-600'}`}
                             >
                                 {t}

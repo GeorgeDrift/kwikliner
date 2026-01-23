@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
     CheckCircle, Briefcase, ChevronRight, ArrowLeft, ArrowRight,
     Building, User as UserIcon, Truck, FileText, ShieldCheck,
-    CreditCard, Upload, AlertCircle
+    CreditCard, Upload, AlertCircle, Loader2
 } from 'lucide-react';
 import { UserRole } from '../types';
 import { useToast } from '../components/ToastContext';
@@ -10,9 +10,10 @@ import { useToast } from '../components/ToastContext';
 interface FleetOwnerRegistrationProps {
     onComplete: (data: any) => void;
     onBack: () => void;
+    isLoading?: boolean;
 }
 
-const FleetOwnerRegistration: React.FC<FleetOwnerRegistrationProps> = ({ onComplete, onBack }) => {
+const FleetOwnerRegistration: React.FC<FleetOwnerRegistrationProps> = ({ onComplete, onBack, isLoading }) => {
     const { addToast } = useToast();
     const [page, setPage] = useState(1);
     const [formData, setFormData] = useState({
@@ -79,7 +80,7 @@ const FleetOwnerRegistration: React.FC<FleetOwnerRegistrationProps> = ({ onCompl
     const handleSubmit = () => {
         // Compile all data into a User object structure
         const finalData = {
-            role: UserRole.FLEET_OWNER,
+            role: UserRole.LOGISTICS_OWNER,
             name: formData.ownerName,
             email: formData.email,
             phone: formData.phone,
@@ -327,10 +328,10 @@ const FleetOwnerRegistration: React.FC<FleetOwnerRegistrationProps> = ({ onCompl
 
                         <button
                             onClick={handleSubmit}
-                            disabled={!formData.agreedTerms || !formData.agreedCompliance}
-                            className="w-full py-5 bg-slate-900 dark:bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-slate-200 dark:shadow-none hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={!formData.agreedTerms || !formData.agreedCompliance || isLoading}
+                            className="w-full py-5 bg-slate-900 dark:bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-slate-200 dark:shadow-none hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
-                            Complete Registration
+                            {isLoading ? <Loader2 className="animate-spin" size={20} /> : 'Complete Registration'}
                         </button>
                     </div>
                 );

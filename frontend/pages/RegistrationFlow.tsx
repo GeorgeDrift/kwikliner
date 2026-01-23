@@ -1,537 +1,638 @@
-
-import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { User, UserRole } from '../types';
+import React, { useState } from 'react';
 import {
-  CheckCircle, Truck, Package, Briefcase, ChevronRight,
-  ArrowLeft, FileText, ShieldCheck, UserPlus, Fingerprint, ShoppingCart,
-  UserCheck
+    CheckCircle, ChevronRight, ArrowLeft, ArrowRight,
+    User, Truck, FileText, Shield, Heart, DollarSign, AlertTriangle, BookOpen, Loader2, LogIn
 } from 'lucide-react';
+import { UserRole } from '../types';
 import { useToast } from '../components/ToastContext';
+import { api } from '../services/api';
+import { useNavigate } from 'react-router-dom';
 
-import FleetOwnerRegistration from './FleetOwnerRegistration';
-import DriverRegistration from './DriverRegistration';
+interface DriverRegistrationProps {
+    onComplete: (data: any) => void;
+    onBack: () => void;
+    isLoading?: boolean;
+}
 
-interface RegistrationFlowProps { onRegister: (user: User) => void; }
+const DriverRegistration: React.FC<DriverRegistrationProps> = ({ onComplete, onBack, isLoading }) => {
+    const { addToast } = useToast();
+    const [page, setPage] = useState(1);
+    const [formData, setFormData] = useState({
+        // Page 1: Personal Info
+        fullName: '', dob: '', gender: '', nationality: '', nationalId: '', passport: '',
+        street: '', city: '', country: '', poBox: '', phone: '', email: '', password: '',
 
-const RegistrationFlow: React.FC<RegistrationFlowProps> = ({ onRegister }) => {
-  const { addToast } = useToast();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [step, setStep] = useState(1);
-  const [isLogin, setIsLogin] = useState(location.state?.isLogin || false);
-  const [role, setRole] = useState<UserRole | null>(location.state?.role || null);
-  const [verificationSent, setVerificationSent] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(180); // 3 minutes in seconds
+        // Page 2: License & Quals
+        licenseNumber: '', licenseClass: '', issuingAuthority: '', issueDate: '', expiryDate: '',
+        certificationHaemat: false, certificationCrossBorder: false, certificationDefensive: false,
+        experienceYears: '', previousEmployer: '',
 
-  useEffect(() => {
-    if (verificationSent && timeLeft > 0) {
-      const timer = setInterval(() => {
-        setTimeLeft(prev => prev - 1);
-      }, 1000);
-      return () => clearInterval(timer);
-    }
-  }, [verificationSent, timeLeft]);
+        // Page 3: Vehicle Assignment
+        driverType: 'Independent', // or 'Company'
+        vehicleMakeModel: '', vehiclePlate: '', vehicleType: '',
+        authorizedConfirmation: false,
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
+        // Page 4: Health & Safety
+        medicallyFit: false, medicalConditions: '',
+        emergencyName: '', emergencyRel: '', emergencyPhone: '', bloodGroup: '',
 
-  const [formData, setFormData] = useState({
-    name: '', phone: '', email: '', password: '', companyName: '', license: '',
-    city: '', location: '', poBox: '', agreeCompliance: false
-  });
+        // Page 5: Background
+        consentBackgroundCheck: false,
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
+        // Page 8: Payment
+        paymentMethod: 'Mobile Money', // or 'Bank'
+        accountDetails: '',
 
-  const validateField = (name: string, value: any) => {
-    let error = '';
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const phoneRegex = /^(0|265)\d{9}$/;
+        // Page 9 & 10: Agreement & Terms
+        infoAccurate: false,
+        agreeTerms: false,
+        agreeCode: false,
+        consentTracking: false,
+        agreeDriverTerms: false,
+        signature: ''
+    });
 
-    switch (name) {
-      case 'email':
-        if (!emailRegex.test(value)) error = 'Invalid email address';
-        break;
-      case 'phone':
-        const phoneDigits = value.replace(/\D/g, '');
-        if (!phoneRegex.test(phoneDigits)) error = 'Phone must start with 0 or 265 followed by exactly 9 digits';
-        break;
-      case 'password':
-        if (value.length < 6) error = 'Password must be at least 6 characters';
-        break;
-      case 'name':
-        if (value.length < 3) error = 'Full name must be at least 3 characters';
-        break;
-      case 'city':
-        if (!value) error = 'City is required';
-        break;
-      case 'location':
-        if (!value) error = 'Specific location is required';
-        break;
-      case 'companyName':
-        if (!value && role === UserRole.HARDWARE_OWNER) error = 'Business name is required';
-        break;
-    }
-    setErrors(prev => ({ ...prev, [name]: error }));
-  };
+    const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const updateField = (name: string, value: any) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
-    validateField(name, value);
-  };
+    const validateField = (name: string, value: any) => {
+        let error = '';
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const phoneRegex = /^(0|265)\d{9}$/;
 
-  const handleNext = () => setStep(prev => prev + 1);
-  const handleBack = () => { if (step === 1) navigate('/'); else setStep(prev => prev - 1); };
-
-  const handleLoginUser = async (role: UserRole | null, email?: string, password?: string) => {
-    try {
-      const body = email ? { email, password } : { role };
-      const response = await fetch('http://localhost:5000/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-
-      if (!response.ok) throw new Error('Login failed');
-
-      const data = await response.json();
-      // Save token and user
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('kwikliner_user', JSON.stringify(data.user));
-
-      onRegister(data.user);
-      navigate('/dashboard');
-      addToast('Welcome back to KwikLiner!', 'success');
-    } catch (error) {
-      console.error('Login error:', error);
-      addToast('Authentication failed. Please check your credentials and try again.', 'error');
-    }
-  };
-
-  const [loginForm, setLoginForm] = useState({ email: '', password: '' });
-
-  if (isLogin && !verificationSent) {
-    return (
-      <div className="min-h-screen bg-white dark:bg-slate-900 flex flex-col items-center justify-center p-4 transition-colors duration-200">
-        <div className="max-w-md w-full space-y-10 animate-in fade-in slide-in-from-bottom-4">
-          <div className="text-center">
-            <h2 className="text-3xl font-black text-slate-900 dark:text-white">Welcome Back</h2>
-            <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">Log in to your KwikLiner account</p>
-          </div>
-
-          <div className="space-y-4">
-            <input
-              placeholder="Email Address"
-              className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-600 outline-none font-medium text-slate-900 dark:text-white"
-              value={loginForm.email}
-              onChange={e => setLoginForm({ ...loginForm, email: e.target.value })}
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-600 outline-none font-medium text-slate-900 dark:text-white"
-              value={loginForm.password}
-              onChange={e => setLoginForm({ ...loginForm, password: e.target.value })}
-            />
-          </div>
-
-          <button
-            onClick={() => handleLoginUser(null, loginForm.email, loginForm.password)}
-            className="w-full bg-blue-600 text-white p-5 rounded-2xl font-black shadow-xl shadow-blue-100"
-          >
-            Log In
-          </button>
-
-          <div className="text-center pt-8 border-t border-slate-100 dark:border-slate-800">
-            <p className="text-sm text-slate-500">
-              New to KwikLiner? <button onClick={() => setIsLogin(false)} className="text-blue-600 font-bold hover:underline">Register Now</button>
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const handleRegisterUser = async (userData: Record<string, any>) => {
-    try {
-      const response = await fetch('http://localhost:5000/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData)
-      });
-
-      if (!response.ok) {
-        const err = await response.json();
-        if (err.error?.includes('unique constraint "users_email_key"')) {
-          throw new Error('This email is already registered. Please use a different email or log in.');
+        switch (name) {
+            case 'email':
+                if (value && !emailRegex.test(value)) error = 'Invalid email address';
+                break;
+            case 'phone':
+            case 'emergencyPhone':
+                const phoneDigits = (value || '').replace(/\D/g, '');
+                if (!phoneRegex.test(phoneDigits)) error = 'Phone must start with 0 or 265 followed by exactly 9 digits';
+                break;
+            case 'password':
+                if (value.length < 6) error = 'Password must be at least 6 characters';
+                break;
+            case 'fullName':
+                if (value.length < 3) error = 'Full name must be at least 3 characters';
+                break;
+            case 'nationalId':
+                if (!value) error = 'National ID is required';
+                break;
+            case 'city':
+                if (!value) error = 'City is required';
+                break;
         }
-        throw new Error(err.error || 'Registration failed');
-      }
-
-      const data = await response.json();
-      setVerificationSent(data.message.includes('email'));
-
-      // We don't log in yet, wait for verification
-      // localStorage.setItem('token', data.token);
-      // localStorage.setItem('kwikliner_user', JSON.stringify(data.user));
-      // onRegister(data.user);
-      // navigate('/dashboard');
-      addToast('Verification email sent! Please check your inbox.', 'success');
-    } catch (error: any) {
-      console.error('Registration error:', error);
-      addToast(error.message, 'error');
-    }
-  };
-
-  const handleResendLink = async () => {
-    try {
-      const response = await fetch('http://localhost:5000/api/auth/resend-verification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: formData.email })
-      });
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || 'Failed to resend link');
-      }
-
-      const data = await response.json();
-      addToast(data.message, 'success');
-      setTimeLeft(180); // Reset timer to 3 minutes
-    } catch (error: any) {
-      console.error('Resend error:', error);
-      addToast(error.message || 'Failed to resend verification link.', 'error');
-    }
-  };
-
-
-  const handleFinalize = () => {
-    const newUser = {
-      role: role!,
-      name: formData.name,
-      phone: formData.phone,
-      email: formData.email,
-      password: formData.password || 'password123',
-      companyName: formData.companyName,
-      city: formData.city,
-      location: formData.location,
-      poBox: formData.poBox
+        setErrors(prev => ({ ...prev, [name]: error }));
     };
-    handleRegisterUser(newUser);
-  };
 
-  const handleFleetOwnerComplete = (data: Record<string, any>) => {
-    const newUser = {
-      role: UserRole.FLEET_OWNER,
-      password: 'password123',
-      ...data
+    const handleChange = (field: string, value: any) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+        validateField(field, value);
     };
-    handleRegisterUser(newUser);
-  };
 
-  const handleDriverComplete = (data: Record<string, any>) => {
-    const newUser = {
-      role: UserRole.DRIVER,
-      password: 'password123',
-      ...data
+    const handleNext = () => setPage(p => p + 1);
+    const handlePrev = () => setPage(p => p - 1);
+
+    const handleSubmit = () => {
+        const finalData = {
+            role: UserRole.DRIVER,
+            name: formData.fullName,
+            email: formData.email,
+            phone: formData.phone,
+            password: formData.password || 'password123',
+            isVerified: false,
+            complianceStatus: 'SUBMITTED',
+            // Map specific fields for the backend or store in a 'profile' object
+            companyName: formData.driverType === 'Company' ? formData.previousEmployer : 'Independent',
+            licenses: [formData.licenseNumber],
+            primaryPayoutMethod: formData.paymentMethod === 'Mobile Money' ? 'MOBILE_MONEY' : 'BANK',
+            mobileMoneyNumber: formData.paymentMethod === 'Mobile Money' ? formData.accountDetails : undefined,
+            accountNumber: formData.paymentMethod === 'Bank' ? formData.accountDetails : undefined,
+        };
+        onComplete(finalData);
     };
-    handleRegisterUser(newUser);
-  };
 
-  // If specific separate flow is chosen
-  if (!verificationSent && step === 2 && role === UserRole.FLEET_OWNER) {
+    const renderPage = () => {
+        switch (page) {
+            case 1: // Personal Info
+                return (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-right-8">
+                        <div className="text-center mb-6">
+                            <h2 className="text-3xl font-black text-slate-900 dark:text-white">Driver Profile</h2>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wide">Step 1 of 8</p>
+                        </div>
+                        <div className="space-y-4">
+                            <div>
+                                <input placeholder="Full Legal Name" className={`p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none ${errors.fullName ? 'ring-2 ring-red-500' : ''}`} value={formData.fullName} onChange={e => handleChange('fullName', e.target.value)} />
+                                {errors.fullName && <p className="text-red-500 text-[10px] font-bold mt-1 ml-2">{errors.fullName}</p>}
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <input type="date" placeholder="DOB" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-500 dark:text-slate-400 outline-none" value={formData.dob} onChange={e => handleChange('dob', e.target.value)} />
+                                <select className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-500 dark:text-slate-400 outline-none" value={formData.gender} onChange={e => handleChange('gender', e.target.value)}>
+                                    <option value="">Gender</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                </select>
+                            </div>
+                            <input placeholder="Nationality" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.nationality} onChange={e => handleChange('nationality', e.target.value)} />
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <input placeholder="National ID" className={`p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none ${errors.nationalId ? 'ring-2 ring-red-500' : ''}`} value={formData.nationalId} onChange={e => handleChange('nationalId', e.target.value)} />
+                                    {errors.nationalId && <p className="text-red-500 text-[10px] font-bold mt-1 ml-2">{errors.nationalId}</p>}
+                                </div>
+                                <input placeholder="Passport (Optional)" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.passport} onChange={e => handleChange('passport', e.target.value)} />
+                            </div>
+
+                            <div className="space-y-2">
+                                <h5 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase">Residential Address</h5>
+                                <input placeholder="Street" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.street} onChange={e => handleChange('street', e.target.value)} />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <input placeholder="City" className={`p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none ${errors.city ? 'ring-2 ring-red-500' : ''}`} value={formData.city} onChange={e => handleChange('city', e.target.value)} />
+                                        {errors.city && <p className="text-red-500 text-[10px] font-bold mt-1 ml-2">{errors.city}</p>}
+                                    </div>
+                                    <input placeholder="Country" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.country} onChange={e => handleChange('country', e.target.value)} />
+                                </div>
+                                <input placeholder="P.O. Box (Optional)" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.poBox} onChange={e => handleChange('poBox', e.target.value)} />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <input placeholder="Phone" maxLength={13} className={`p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none ${errors.phone ? 'ring-2 ring-red-500' : ''}`} value={formData.phone} onChange={e => handleChange('phone', e.target.value)} />
+                                    {errors.phone && <p className="text-red-500 text-[10px] font-bold mt-1 ml-2">{errors.phone}</p>}
+                                </div>
+                                <div>
+                                    <input placeholder="Email (Optional)" className={`p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none ${errors.email ? 'ring-2 ring-red-500' : ''}`} value={formData.email} onChange={e => handleChange('email', e.target.value)} />
+                                    {errors.email && <p className="text-red-500 text-[10px] font-bold mt-1 ml-2">{errors.email}</p>}
+                                </div>
+                            </div>
+
+                            <div>
+                                <input type="password" placeholder="Password" className={`p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none ${errors.password ? 'ring-2 ring-red-500' : ''}`} value={formData.password} onChange={e => handleChange('password', e.target.value)} />
+                                {errors.password && <p className="text-red-500 text-[10px] font-bold mt-1 ml-2">{errors.password}</p>}
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => {
+                                if (Object.values(errors).some(e => e)) {
+                                    addToast('Please correct the highlighted errors before continuing.', 'error');
+                                    return;
+                                }
+                                handleNext();
+                            }}
+                            disabled={!formData.fullName || !formData.phone || !formData.password || Object.values(errors).some(e => e)}
+                            className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Continue
+                        </button>
+                    </div>
+                );
+            case 2: // License & Qualifications
+                return (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-right-8">
+                        <div className="text-center mb-6">
+                            <h2 className="text-3xl font-black text-slate-900 dark:text-white">License & Skills</h2>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wide">Step 2 of 8</p>
+                        </div>
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <input placeholder="License Number" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.licenseNumber} onChange={e => handleChange('licenseNumber', e.target.value)} />
+                                <input placeholder="Class / Category" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.licenseClass} onChange={e => handleChange('licenseClass', e.target.value)} />
+                            </div>
+                            <input placeholder="Issuing Authority" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.issuingAuthority} onChange={e => handleChange('issuingAuthority', e.target.value)} />
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 pl-2">Issue Date</label>
+                                    <input type="date" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-500 dark:text-slate-400 outline-none" value={formData.issueDate} onChange={e => handleChange('issueDate', e.target.value)} />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 pl-2">Expiry Date</label>
+                                    <input type="date" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-500 dark:text-slate-400 outline-none" value={formData.expiryDate} onChange={e => handleChange('expiryDate', e.target.value)} />
+                                </div>
+                            </div>
+
+                            <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl space-y-3">
+                                <p className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase">Certifications</p>
+                                {[
+                                    { k: 'certificationHaemat', l: 'Hazardous Materials' },
+                                    { k: 'certificationCrossBorder', l: 'Cross-Border Permit' },
+                                    { k: 'certificationDefensive', l: 'Defensive Driving' }
+                                ].map(c => (
+                                    <label key={c.k} className="flex items-center gap-3 cursor-pointer">
+                                        <input type="checkbox" className="h-5 w-5 rounded-md accent-blue-600 bg-white dark:bg-slate-900" checked={(formData as any)[c.k]} onChange={e => handleChange(c.k, e.target.checked)} />
+                                        <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{c.l}</span>
+                                    </label>
+                                ))}
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <input placeholder="Exp. (Years)" type="number" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.experienceYears} onChange={e => handleChange('experienceYears', e.target.value)} />
+                                <input placeholder="Previous Employer" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.previousEmployer} onChange={e => handleChange('previousEmployer', e.target.value)} />
+                            </div>
+                        </div>
+                        <button onClick={handleNext} className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl hover:scale-[1.02] transition-all">
+                            Continue
+                        </button>
+                    </div>
+                );
+            case 3: // Vehicle Assignment
+                return (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-right-8">
+                        <div className="text-center mb-6">
+                            <h2 className="text-3xl font-black text-slate-900 dark:text-white">Vehicle Info</h2>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wide">Step 3 of 8</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                            <button
+                                onClick={() => handleChange('driverType', 'Company')}
+                                className={`p-4 rounded-2xl border-2 font-bold transition-all ${formData.driverType === 'Company' ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-600' : 'border-slate-100 dark:border-slate-800 text-slate-400 dark:text-slate-600'}`}
+                            >
+                                Company Driver
+                            </button>
+                            <button
+                                onClick={() => handleChange('driverType', 'Independent')}
+                                className={`p-4 rounded-2xl border-2 font-bold transition-all ${formData.driverType === 'Independent' ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-600' : 'border-slate-100 dark:border-slate-800 text-slate-400 dark:text-slate-600'}`}
+                            >
+                                Independent
+                            </button>
+                        </div>
+                        <div className="space-y-4">
+                            <input placeholder="Vehicle Make & Model" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.vehicleMakeModel} onChange={e => handleChange('vehicleMakeModel', e.target.value)} />
+                            <input placeholder="License Plate" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.vehiclePlate} onChange={e => handleChange('vehiclePlate', e.target.value)} />
+                            <select className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-500 dark:text-slate-400 outline-none" value={formData.vehicleType} onChange={e => handleChange('vehicleType', e.target.value)}>
+                                <option value="">Vehicle Type</option>
+                                <option value="Truck">Truck</option>
+                                <option value="Van">Van</option>
+                                <option value="Pickup">Pickup</option>
+                                <option value="Bike">Bike</option>
+                            </select>
+                            <label className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-2xl cursor-pointer">
+                                <input type="checkbox" className="mt-1 h-5 w-5 rounded-md accent-blue-600 bg-white dark:bg-slate-900 shrink-0" checked={formData.authorizedConfirmation} onChange={e => handleChange('authorizedConfirmation', e.target.checked)} />
+                                <span className="text-xs font-bold text-blue-800 dark:text-blue-200 leading-relaxed">I confirm that I am authorized to operate the above vehicle(s) for freight services on the KwikLiner platform.</span>
+                            </label>
+                        </div>
+                        <button onClick={handleNext} className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl hover:scale-[1.02] transition-all">
+                            Continue
+                        </button>
+                    </div>
+                );
+            case 4: // Health & Safety
+                return (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-right-8">
+                        <div className="text-center mb-6">
+                            <h2 className="text-3xl font-black text-slate-900 dark:text-white">Health & Safety</h2>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wide">Step 4 of 8</p>
+                        </div>
+
+                        <div className="bg-red-50 dark:bg-red-900/10 p-6 rounded-3xl border border-red-100 dark:border-red-900/30 mb-6 transition-colors">
+                            <div className="flex items-center gap-3 mb-4">
+                                <Heart className="text-red-500" />
+                                <h4 className="font-black text-red-900 dark:text-red-200">Medical Fitness</h4>
+                            </div>
+                            <label className="flex items-start gap-3 cursor-pointer">
+                                <input type="checkbox" className="mt-1 h-5 w-5 rounded-md accent-red-500 bg-white dark:bg-slate-900 shrink-0" checked={formData.medicallyFit} onChange={e => handleChange('medicallyFit', e.target.checked)} />
+                                <span className="text-sm font-bold text-red-800 dark:text-red-300">I confirm that I am medically fit to operate commercial vehicles.</span>
+                            </label>
+                            <input placeholder="Known Medical Conditions (Optional)" className="mt-4 p-4 bg-white dark:bg-slate-800 border-none rounded-xl font-bold w-full text-sm placeholder:text-red-200 dark:placeholder:text-red-900/50 text-red-900 dark:text-red-100 outline-none" value={formData.medicalConditions} onChange={e => handleChange('medicalConditions', e.target.value)} />
+                        </div>
+
+                        <div className="space-y-4">
+                            <h5 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase">Emergency Contact</h5>
+                            <input placeholder="Name" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.emergencyName} onChange={e => handleChange('emergencyName', e.target.value)} />
+                            <input placeholder="Relationship" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.emergencyRel} onChange={e => handleChange('emergencyRel', e.target.value)} />
+                            <div className="grid grid-cols-2 gap-4">
+                                <input placeholder="Phone" maxLength={13} className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.emergencyPhone} onChange={e => handleChange('emergencyPhone', e.target.value)} />
+                                <input placeholder="Blood Group (Opt)" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.bloodGroup} onChange={e => handleChange('bloodGroup', e.target.value)} />
+                            </div>
+                        </div>
+                        <button onClick={handleNext} className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl hover:scale-[1.02] transition-all">
+                            Continue
+                        </button>
+                    </div>
+                );
+            case 5: // Background Check
+                return (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-right-8">
+                        <div className="text-center mb-6">
+                            <h2 className="text-3xl font-black text-slate-900 dark:text-white">Security Check</h2>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wide">Step 5 of 8</p>
+                        </div>
+                        <div className="bg-slate-900 dark:bg-slate-950 text-white p-8 rounded-[40px] text-center space-y-6 border border-slate-800 transition-colors">
+                            <Shield className="h-16 w-16 mx-auto text-blue-500" />
+                            <div>
+                                <h4 className="text-xl font-black mb-2">Background Screening</h4>
+                                <p className="text-slate-400 text-sm leading-relaxed">
+                                    To ensure platform safety, KwikLiner may conduct criminal background checks, driving history verification, and license authenticity verification.
+                                </p>
+                            </div>
+                            <label className="flex items-start gap-4 text-left p-4 bg-white/10 dark:bg-white/5 rounded-2xl cursor-pointer hover:bg-white/20 dark:hover:bg-white/10 transition-all border border-white/5">
+                                <input type="checkbox" className="mt-1 h-6 w-6 rounded-md accent-blue-500 bg-white dark:bg-slate-900 shrink-0" checked={formData.consentBackgroundCheck} onChange={e => handleChange('consentBackgroundCheck', e.target.checked)} />
+                                <div>
+                                    <span className="font-bold block">I give my consent</span>
+                                    <span className="text-xs text-slate-400">Providing false information may result in rejection or permanent suspension.</span>
+                                </div>
+                            </label>
+                        </div>
+                        <button onClick={handleNext} className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl hover:scale-[1.02] transition-all">
+                            Continue
+                        </button>
+                    </div>
+                );
+            case 6: // Code of Conduct & Responsibilities
+                return (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-right-8">
+                        <div className="text-center mb-6">
+                            <h2 className="text-3xl font-black text-slate-900 dark:text-white">Responsibilities</h2>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wide">Step 6 of 8</p>
+                        </div>
+
+                        <div className="space-y-6 h-[400px] overflow-y-auto pr-2 scrollbar-thin">
+                            <div className="space-y-3">
+                                <h4 className="flex items-center gap-2 font-black text-slate-900 dark:text-white text-lg">
+                                    <BookOpen className="text-blue-600 dark:text-blue-400" size={20} /> Code of Conduct
+                                </h4>
+                                <ul className="space-y-2 text-sm font-medium text-slate-600 dark:text-slate-400 list-disc pl-5">
+                                    <li>Obey all traffic laws and transport regulations</li>
+                                    <li>Zero tolerance for alcohol or drug use while on duty</li>
+                                    <li>Respect customers, cargo, and fellow road users</li>
+                                    <li>Maintain professionalism and punctuality</li>
+                                    <li>Protect cargo from damage, theft, or misuse</li>
+                                </ul>
+                            </div>
+                            <div className="space-y-3 pt-6 border-t border-slate-100 dark:border-slate-800">
+                                <h4 className="flex items-center gap-2 font-black text-slate-900 dark:text-white text-lg">
+                                    <AlertTriangle className="text-amber-500" size={20} /> Operational Duties
+                                </h4>
+                                <ul className="space-y-2 text-sm font-medium text-slate-600 dark:text-slate-400 list-disc pl-5">
+                                    <li>Confirming cargo pickup and delivery in-app</li>
+                                    <li>Using KwikLiner navigation and tracking tools</li>
+                                    <li>Uploading proof of delivery (photos/signatures)</li>
+                                    <li>Reporting incidents, delays, or emergencies immediately</li>
+                                    <li>Using the Panic/SOS button when necessary</li>
+                                    <li className="text-red-600 dark:text-red-400 font-bold">Payments outside KwikLiner are strictly prohibited (Lawsuit/Ban risk)</li>
+                                    <li className="text-red-600 dark:text-red-400 font-bold">Cancelling scheduled trips will incur financial penalties</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <label className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 cursor-pointer transition-colors">
+                            <input type="checkbox" className="h-5 w-5 rounded-md accent-blue-600 bg-white dark:bg-slate-900" checked={formData.agreeCode} onChange={e => handleChange('agreeCode', e.target.checked)} />
+                            <span className="text-sm font-bold text-slate-900 dark:text-white">I agree to Code of Conduct & Responsibilities</span>
+                        </label>
+                        <button onClick={handleNext} className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl hover:scale-[1.02] transition-all">
+                            Continue
+                        </button>
+                    </div>
+                );
+            case 7: // Payment
+                return (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-right-8">
+                        <div className="text-center mb-6">
+                            <h2 className="text-3xl font-black text-slate-900 dark:text-white">Payout Details</h2>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wide">Step 7 of 8</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 mb-6">
+                            <button
+                                onClick={() => handleChange('paymentMethod', 'Mobile Money')}
+                                className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all ${formData.paymentMethod === 'Mobile Money' ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-600' : 'border-slate-100 dark:border-slate-800 text-slate-400 dark:text-slate-600'}`}
+                            >
+                                <DollarSign size={24} />
+                                <span className="text-xs font-black uppercase">Mobile Money</span>
+                            </button>
+                            <button
+                                onClick={() => handleChange('paymentMethod', 'Bank')}
+                                className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all ${formData.paymentMethod === 'Bank' ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-600' : 'border-slate-100 dark:border-slate-800 text-slate-400 dark:text-slate-600'}`}
+                            >
+                                <FileText size={24} />
+                                <span className="text-xs font-black uppercase">Bank Transfer</span>
+                            </button>
+                        </div>
+                        <input
+                            placeholder={formData.paymentMethod === 'Mobile Money' ? "Phone Number" : "Account Number / Details"}
+                            maxLength={13}
+                            className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none"
+                            value={formData.accountDetails}
+                            onChange={e => handleChange('accountDetails', e.target.value)}
+                        />
+                        <p className="text-center text-xs text-slate-400 dark:text-slate-500 font-medium px-4">
+                            Drivers acknowledge that earnings are subject to KwikLiner’s commission and payment processing timelines.
+                        </p>
+                        <button onClick={handleNext} className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl hover:scale-[1.02] transition-all">
+                            Continue
+                        </button>
+                    </div>
+                );
+            case 8: // Final Agreement
+                return (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
+                        <div className="text-center mb-6">
+                            <h2 className="text-3xl font-black text-slate-900 dark:text-white">Final Agreement</h2>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wide">Step 8 of 8</p>
+                        </div>
+
+                        <div className="space-y-3 bg-slate-50 dark:bg-slate-800 p-6 rounded-3xl border border-slate-100 dark:border-slate-700 transition-colors">
+                            {[
+                                { k: 'infoAccurate', l: 'All information provided is true and accurate' },
+                                { k: 'agreeTerms', l: 'I agree to comply with KwikLiner’s Terms of Use' },
+                                { k: 'consentTracking', l: 'I consent to monitoring and tracking during active trips' },
+                                { k: 'agreeDriverTerms', l: 'I agree to KwikLiner Driver Terms (Indep. Contractor)' },
+                                { k: 'agreeStrictPayments', l: 'I confirm all payments will stay on-platform or face lawsuit' }
+                            ].map(c => (
+                                <label key={c.k} className="flex items-start gap-3 cursor-pointer">
+                                    <input type="checkbox" className="mt-1 h-5 w-5 rounded-md accent-blue-600 bg-white dark:bg-slate-900 shrink-0" checked={(formData as any)[c.k]} onChange={e => handleChange(c.k, e.target.checked)} />
+                                    <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{c.l}</span>
+                                </label>
+                            ))}
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase ml-1">Digital Signature</label>
+                            <input
+                                placeholder="Type Full Name as Signature"
+                                className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full focus:ring-2 focus:ring-blue-600 outline-none text-slate-900 dark:text-white"
+                                value={formData.signature}
+                                onChange={e => handleChange('signature', e.target.value)}
+                            />
+                        </div>
+
+                        <button
+                            onClick={handleSubmit}
+                            disabled={!formData.infoAccurate || !formData.agreeTerms || !formData.signature || isLoading}
+                            className="w-full py-5 bg-slate-900 dark:bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-slate-200 dark:shadow-none hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                            {isLoading ? <Loader2 className="animate-spin" size={20} /> : 'Submit Application'}
+                        </button>
+                    </div>
+                );
+            default: return null;
+        }
+    };
+
     return (
-      <div className="min-h-screen bg-white dark:bg-slate-900">
-        <FleetOwnerRegistration onComplete={handleFleetOwnerComplete} onBack={handleBack} />
-      </div>
-    );
-  }
-
-  if (!verificationSent && step === 2 && role === UserRole.DRIVER) {
-    return (
-      <div className="min-h-screen bg-white dark:bg-slate-900">
-        <DriverRegistration onComplete={handleDriverComplete} onBack={handleBack} />
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-white dark:bg-slate-900 flex flex-col items-center justify-center p-4 transition-colors duration-200">
-      <div className="max-w-xl w-full">
-        {/* Progress */}
-        {role !== UserRole.FLEET_OWNER && role !== UserRole.DRIVER && !verificationSent && (
-          <div className="mb-12 flex items-center justify-center space-x-2">
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className={`h-2 rounded-full transition-all ${step >= i ? 'bg-blue-600 w-12' : 'bg-slate-100 dark:bg-slate-800 w-4'}`} />
-            ))}
-          </div>
-        )}
-
-        {verificationSent ? (
-          <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 text-center">
-            <div className="bg-blue-600 h-24 w-24 rounded-full flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-blue-200">
-              <CheckCircle className="h-12 w-12 text-white" />
-            </div>
-            <div>
-              <h2 className="text-3xl font-black text-slate-900 dark:text-white">Verify Your Email</h2>
-              <p className="text-slate-500 dark:text-slate-400 mt-4 font-medium leading-relaxed text-lg">
-                We've sent a verification link to <span className="text-blue-600 font-bold">{formData.email}</span>.
-              </p>
-              <div className="mt-8 bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl inline-block border border-slate-100 dark:border-slate-800">
-                <p className="text-slate-400 dark:text-slate-500 text-xs font-black uppercase tracking-[0.2em] mb-2">Link expires in</p>
-                <p className="text-4xl font-black text-blue-600 font-mono tracking-tighter">{formatTime(timeLeft)}</p>
-              </div>
-            </div>
-            <div className="pt-8 space-y-4">
-              <button
-                onClick={() => {
-                  setVerificationSent(false);
-                  setIsLogin(true);
-                  setStep(1);
-                }}
-                className="w-full bg-slate-900 dark:bg-slate-800 text-white p-5 rounded-2xl font-black shadow-xl"
-              >
-                Back to Login
-              </button>
-              <p className="text-sm text-slate-400 font-bold">
-                Didn't receive it? <button onClick={handleResendLink} className="text-blue-600 hover:underline">Resend link</button>
-              </p>
-            </div>
-          </div>
-        ) : step === 1 && (
-          <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4">
-            <div className="text-center">
-              <h2 className="text-3xl font-black text-slate-900 dark:text-white">Access KwikLiner</h2>
-              <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">Select your role or try a demo account</p>
-            </div>
-
-            {/* Registration Options */}
-            <div className="grid grid-cols-1 gap-4">
-              {[
-                { id: UserRole.SHIPPER, title: 'I am a Shipper', desc: 'Customer wanting to send or transport equipment. No document upload required.', icon: <Package className="text-blue-600" /> },
-                { id: UserRole.DRIVER, title: 'I am a Driver', desc: 'I am an independent driver looking for work', icon: <Truck className="text-blue-600" /> },
-                { id: UserRole.FLEET_OWNER, title: 'I am a Fleet Owner', desc: 'I want to manage a fleet and drivers', icon: <Briefcase className="text-blue-600" /> },
-                { id: UserRole.HARDWARE_OWNER, title: 'I sell Spares & Tools', desc: 'I have a shop and want to list hardware', icon: <ShoppingCart className="text-blue-600" /> },
-              ].map(opt => (
-                <button
-                  key={opt.id}
-                  onClick={() => { setRole(opt.id); setStep(2); }}
-                  className="flex items-center p-6 border-2 border-slate-100 dark:border-slate-800 rounded-3xl hover:border-blue-600 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-left group"
-                >
-                  <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm mr-6 group-hover:scale-110 transition-transform">{opt.icon}</div>
-                  <div className="flex-grow">
-                    <h3 className="font-extrabold text-lg text-slate-900 dark:text-white">{opt.title}</h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{opt.desc}</p>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-slate-300 dark:text-slate-600 group-hover:text-blue-600 dark:group-hover:text-blue-400" />
+        <div className="flex-grow w-full max-w-xl mx-auto py-10">
+            <div className="mb-8 flex items-center justify-between">
+                <button onClick={page === 1 ? onBack : handlePrev} className="flex items-center text-slate-400 dark:text-slate-500 font-bold hover:text-slate-900 dark:hover:text-white transition-colors">
+                    <ArrowLeft size={16} className="mr-2" /> Back
                 </button>
-              ))}
+                {page < 8 && (
+                    <button onClick={handleNext} className="flex items-center text-blue-600 dark:text-blue-400 font-bold hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
+                        Next <ArrowRight size={16} className="ml-2" />
+                    </button>
+                )}
             </div>
+            {renderPage()}
+        </div>
+    );
+};
 
-            {/* Quick Access Demo Removed */}
-            <div className="pt-8 border-t border-slate-100 dark:border-slate-800 text-center">
-              <p className="text-sm text-slate-500">Already have an account? <button onClick={() => setIsLogin(true)} className="text-blue-600 font-bold hover:underline">Log In</button></p>
-            </div>
-          </div>
-        )}
+// LOGIN FORM COMPONENT
+const LoginForm: React.FC<{ onRegisterClick: () => void; onRegister: (user: any) => void }> = ({ onRegisterClick, onRegister }) => {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState('');
+    const { addToast } = useToast();
+    const navigate = useNavigate();
 
-        {!verificationSent && step === 2 && role !== UserRole.FLEET_OWNER && role !== UserRole.DRIVER && (
-          <div className="space-y-8 animate-in fade-in slide-in-from-right-4">
-            <button onClick={handleBack} className="flex items-center text-slate-400 dark:text-slate-500 font-bold text-sm hover:text-blue-600 dark:hover:text-blue-400">
-              <ArrowLeft className="h-4 w-4 mr-2" /> Back
-            </button>
-            <div className="text-center">
-              <h2 className="text-3xl font-black text-slate-900 dark:text-white">Basic Information</h2>
-              <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">Help us set up your profile</p>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <input
-                  placeholder="Full Legal Name"
-                  className={`w-full p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-600 outline-none font-medium text-slate-900 dark:text-white ${errors.name ? 'ring-2 ring-red-500' : ''}`}
-                  value={formData.name} onChange={e => updateField('name', e.target.value)}
-                />
-                {errors.name && <p className="text-red-500 text-xs font-bold mt-1 ml-2">{errors.name}</p>}
-              </div>
+    const handleLogin = async () => {
+        if (!email || !password) {
+            setError('Email and password are required');
+            return;
+        }
 
-              <div>
-                <input
-                  placeholder="Phone Number (+265...)"
-                  maxLength={13}
-                  className={`w-full p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-600 outline-none font-medium text-slate-900 dark:text-white ${errors.phone ? 'ring-2 ring-red-500' : ''}`}
-                  value={formData.phone} onChange={e => updateField('phone', e.target.value)}
-                />
-                {errors.phone && <p className="text-red-500 text-xs font-bold mt-1 ml-2">{errors.phone}</p>}
-              </div>
+        setIsLoading(true);
+        setError('');
 
-              <div>
-                <input
-                  placeholder="Email Address"
-                  className={`w-full p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-600 outline-none font-medium text-slate-900 dark:text-white ${errors.email ? 'ring-2 ring-red-500' : ''}`}
-                  value={formData.email} onChange={e => updateField('email', e.target.value)}
-                />
-                {errors.email && <p className="text-red-500 text-xs font-bold mt-1 ml-2">{errors.email}</p>}
-              </div>
+        try {
+            const response = await api.loginWithEmail(email, password);
+            if (response && response.token) {
+                localStorage.setItem('token', response.token);
+                onRegister(response.user);
+                addToast(`Welcome back, ${response.user.name}!`, 'success');
+                navigate('/dashboard');
+            } else {
+                setError(response.error || 'Invalid credentials');
+            }
+        } catch (err: any) {
+            const errorMsg = err.message || 'Login failed. Please try again.';
+            setError(errorMsg);
+            addToast(errorMsg, 'error');
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
-              <div>
-                <input
-                  type="password"
-                  placeholder="Password"
-                  className={`w-full p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-600 outline-none font-medium text-slate-900 dark:text-white ${errors.password ? 'ring-2 ring-red-500' : ''}`}
-                  value={formData.password} onChange={e => updateField('password', e.target.value)}
-                />
-                {errors.password && <p className="text-red-500 text-xs font-bold mt-1 ml-2">{errors.password}</p>}
-              </div>
-
-              {(role === UserRole.HARDWARE_OWNER) && (
-                <div>
-                  <input
-                    placeholder="Business/Shop Name"
-                    className={`w-full p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-600 outline-none font-medium text-slate-900 dark:text-white ${errors.companyName ? 'ring-2 ring-red-500' : ''}`}
-                    value={formData.companyName} onChange={e => updateField('companyName', e.target.value)}
-                  />
-                  {errors.companyName && <p className="text-red-500 text-xs font-bold mt-1 ml-2">{errors.companyName}</p>}
+    return (
+        <div className="flex-grow w-full max-w-xl mx-auto py-10">
+            <div className="space-y-6 animate-in fade-in slide-in-from-right-8">
+                <div className="text-center mb-8">
+                    <h2 className="text-3xl font-black text-slate-900 dark:text-white">Sign In</h2>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm font-bold mt-2">Access your KwikLiner account</p>
                 </div>
-              )}
-            </div>
-            <button
-              onClick={() => {
-                const phoneDigits = formData.phone.replace(/\D/g, '');
-                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                const phoneRegex = /^(0|265)\d{9}$/;
 
-                if (!phoneRegex.test(phoneDigits)) {
-                  addToast('Phone number must start with 0 or 265 followed by exactly 9 digits.', 'error');
-                  return;
-                }
-                if (!emailRegex.test(formData.email)) {
-                  addToast('Please enter a valid email address.', 'error');
-                  return;
-                }
-                if (Object.values(errors).some(e => e)) {
-                  addToast('Please correct the highlighted errors before continuing.', 'error');
-                  return;
-                }
-                handleNext();
-              }}
-              disabled={!formData.name || !formData.phone || !formData.email || !formData.password || Object.values(errors).some(e => e)}
-              className="w-full bg-blue-600 text-white p-5 rounded-2xl font-black shadow-xl shadow-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Continue
-            </button>
-          </div>
-        )}
+                <div className="space-y-4">
+                    <div>
+                        <label className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase ml-1 block mb-2">Email Address</label>
+                        <input
+                            type="email"
+                            placeholder="your@email.com"
+                            value={email}
+                            onChange={(e) => {
+                                setEmail(e.target.value);
+                                setError('');
+                            }}
+                            className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-600"
+                        />
+                    </div>
 
-        {!verificationSent && step === 3 && role !== UserRole.FLEET_OWNER && role !== UserRole.DRIVER && (
-          <div className="space-y-8 animate-in fade-in slide-in-from-right-4">
-            <button onClick={handleBack} className="flex items-center text-slate-400 dark:text-slate-500 font-bold text-sm hover:text-blue-600 dark:hover:text-blue-400">
-              <ArrowLeft className="h-4 w-4 mr-2" /> Back
-            </button>
-            <div className="text-center">
-              <h2 className="text-3xl font-black text-slate-900 dark:text-white">Location Details</h2>
-              <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">Almost there! Where are you located?</p>
+                    <div>
+                        <label className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase ml-1 block mb-2">Password</label>
+                        <input
+                            type="password"
+                            placeholder="••••••••"
+                            value={password}
+                            onChange={(e) => {
+                                setPassword(e.target.value);
+                                setError('');
+                            }}
+                            onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+                            className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-600"
+                        />
+                    </div>
+
+                    {error && <p className="text-red-500 text-sm font-bold text-center">{error}</p>}
+                </div>
+
+                <button
+                    onClick={handleLogin}
+                    disabled={isLoading || !email || !password}
+                    className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                    {isLoading ? <Loader2 className="animate-spin" size={20} /> : <LogIn size={20} />}
+                    {isLoading ? 'Signing In...' : 'Sign In'}
+                </button>
+
+                <div className="relative my-6">
+                    <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-slate-200 dark:border-slate-700"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                        <span className="px-2 bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400">New to KwikLiner?</span>
+                    </div>
+                </div>
+
+                <button
+                    onClick={onRegisterClick}
+                    className="w-full py-3 border-2 border-blue-600 text-blue-600 dark:text-blue-400 rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all"
+                >
+                    Create Account
+                </button>
             </div>
-            <div className="space-y-4">
-              <div>
-                <input
-                  placeholder="City"
-                  className={`w-full p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-600 outline-none font-medium text-slate-900 dark:text-white ${errors.city ? 'ring-2 ring-red-500' : ''}`}
-                  value={formData.city} onChange={e => updateField('city', e.target.value)}
+        </div>
+    );
+};
+
+// WRAPPER COMPONENT
+interface RegistrationFlowProps {
+    onRegister: (user: any) => void;
+    defaultMode?: 'login' | 'register';
+}
+
+const RegistrationFlow: React.FC<RegistrationFlowProps> = ({ onRegister, defaultMode = 'register' }) => {
+    const [mode, setMode] = useState<'login' | 'register'>(defaultMode);
+    const navigate = useNavigate();
+
+    if (mode === 'login') {
+        return (
+            <LoginForm
+                onRegisterClick={() => setMode('register')}
+                onRegister={onRegister}
+            />
+        );
+    }
+
+    return (
+        <div className="flex flex-col min-h-[calc(100vh-200px)]">
+            <div className="flex-grow">
+                <DriverRegistration
+                    onComplete={onRegister}
+                    onBack={() => navigate('/')}
                 />
-                {errors.city && <p className="text-red-500 text-xs font-bold mt-1 ml-2">{errors.city}</p>}
-              </div>
-
-              <div>
-                <input
-                  placeholder="Specific Street / Landmark Location"
-                  className={`w-full p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-600 outline-none font-medium text-slate-900 dark:text-white ${errors.location ? 'ring-2 ring-red-500' : ''}`}
-                  value={formData.location} onChange={e => updateField('location', e.target.value)}
-                />
-                {errors.location && <p className="text-red-500 text-xs font-bold mt-1 ml-2">{errors.location}</p>}
-              </div>
-
-              <div>
-                <input
-                  placeholder="P.O. Box (Optional)"
-                  className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-600 outline-none font-medium text-slate-900 dark:text-white"
-                  value={formData.poBox} onChange={e => updateField('poBox', e.target.value)}
-                />
-              </div>
-
-              <div className="flex items-center p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl">
-                <input
-                  type="checkbox"
-                  id="compliance"
-                  className="h-5 w-5 rounded-lg border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-600 bg-white dark:bg-slate-900"
-                  checked={formData.agreeCompliance}
-                  onChange={e => setFormData({ ...formData, agreeCompliance: e.target.checked })}
-                />
-                <label htmlFor="compliance" className="ml-3 text-xs text-slate-500 dark:text-slate-400 font-bold">
-                  I agree to the KwikLiner compliance rules:
-                  • Not to make payments outside the system (punishable by lawsuit)
-                  • Cancellation of scheduled trips will incur costs
-                  • All payments must be made within the platform
-                </label>
-              </div>
             </div>
-            <button
-              onClick={() => {
-                if (Object.values(errors).some(e => e)) {
-                  addToast('Please correct the highlighted errors before completing registration.', 'error');
-                  return;
-                }
-                role === UserRole.SHIPPER || role === UserRole.HARDWARE_OWNER ? handleFinalize() : handleNext();
-              }}
-              disabled={!formData.agreeCompliance || !formData.city || !formData.location || Object.values(errors).some(e => e)}
-              className="w-full bg-blue-600 text-white p-5 rounded-2xl font-black shadow-xl shadow-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {role === UserRole.SHIPPER || role === UserRole.HARDWARE_OWNER ? 'Complete Registration' : 'Continue'}
-            </button>
-          </div>
-        )}
-
-        {!verificationSent && step === 4 && role !== UserRole.FLEET_OWNER && role !== UserRole.DRIVER && (
-          <div className="space-y-8 animate-in fade-in slide-in-from-right-4">
-            <button onClick={handleBack} className="flex items-center text-slate-400 dark:text-slate-500 font-bold text-sm hover:text-blue-600 dark:hover:text-blue-400">
-              <ArrowLeft className="h-4 w-4 mr-2" /> Back
-            </button>
-            <div className="text-center">
-              <h2 className="text-3xl font-black text-slate-900 dark:text-white">Compliance & Security</h2>
-              <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">Verify your business to start selling</p>
+            <div className="text-center pb-8 pt-4">
+                <p className="text-slate-600 dark:text-slate-400 text-sm font-medium">
+                    Already have an account?{' '}
+                    <button
+                        onClick={() => setMode('login')}
+                        className="text-blue-600 dark:text-blue-400 font-black hover:underline"
+                    >
+                        Sign In
+                    </button>
+                </p>
             </div>
-
-            <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-3xl border border-blue-100 dark:border-blue-800 flex items-start space-x-4">
-              <Fingerprint className="h-8 w-8 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-              <div>
-                <h4 className="font-bold text-blue-900 dark:text-blue-200">Verification Required</h4>
-                <p className="text-sm text-blue-700 dark:text-blue-400 font-medium">We require business registration docs or ID to ensure the marketplace remains trusted.</p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="p-10 border-4 border-dashed border-slate-100 dark:border-slate-800 rounded-3xl text-center cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group">
-                <FileText className="h-10 w-10 text-slate-200 dark:text-slate-700 mx-auto mb-2 group-hover:text-blue-600 transition-colors" />
-                <p className="text-slate-400 dark:text-slate-500 font-bold">Upload Documents</p>
-              </div>
-              <div className="flex items-center p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl">
-                <input type="checkbox" id="terms" className="h-5 w-5 rounded-lg border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-600 bg-white dark:bg-slate-900" />
-                <label htmlFor="terms" className="ml-3 text-xs text-slate-500 dark:text-slate-400 font-bold">I agree to the KwikLiner Marketplace Seller Terms</label>
-              </div>
-            </div>
-
-            <button onClick={handleFinalize} className="w-full bg-blue-600 text-white p-5 rounded-2xl font-black shadow-xl shadow-blue-100">
-              Complete Registration
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+        </div>
+    );
 };
 
 export default RegistrationFlow;
-

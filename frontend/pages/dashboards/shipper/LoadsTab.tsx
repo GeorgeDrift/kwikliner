@@ -42,6 +42,7 @@ const LoadsTab: React.FC<LoadsTabProps> = ({
                                 <th className="px-8 py-6 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Route</th>
                                 <th className="px-8 py-6 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Cargo</th>
                                 <th className="px-8 py-6 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Price/Budget</th>
+                                <th className="px-8 py-6 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Pickup Date</th>
                                 <th className="px-8 py-6 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Status</th>
                                 <th className="px-8 py-6 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Action</th>
                             </tr>
@@ -52,12 +53,19 @@ const LoadsTab: React.FC<LoadsTabProps> = ({
                                 s.status === 'Finding Driver' ||
                                 s.status === 'Waiting for Driver Commitment' ||
                                 s.status === 'Pending Deposit'
-                            ).map((row: any, i: number) => (
+                            ).sort((a: any, b: any) => {
+                                const dateA = new Date(a.pickup_date || a.created_at || 0).getTime();
+                                const dateB = new Date(b.pickup_date || b.created_at || 0).getTime();
+                                return dateB - dateA;
+                            }).map((row: any, i: number) => {
+                                const pickupDate = row.pickup_date ? new Date(row.pickup_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' }) : 'N/A';
+                                return (
                                 <tr key={i} className="border-b border-slate-50 dark:border-slate-700 hover:bg-slate-50/50 dark:hover:bg-slate-900/50 transition-all cursor-pointer">
                                     <td className="px-8 py-6 text-sm font-black text-slate-900 dark:text-white">{row.id}</td>
                                     <td className="px-8 py-6 text-sm font-bold text-slate-700 dark:text-slate-300">{row.route}</td>
                                     <td className="px-8 py-6 text-sm font-bold text-slate-500 dark:text-slate-400">{row.cargo}</td>
                                     <td className="px-8 py-6 text-sm font-black text-blue-600 dark:text-blue-400">{row.price}</td>
+                                    <td className="px-8 py-6 text-sm font-bold text-slate-600 dark:text-slate-400">{pickupDate}</td>
                                     <td className="px-8 py-6">
                                         <span className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest ${row.color}`}>{row.status}</span>
                                         {row.bids > 0 && row.status === 'Bidding Open' && (
@@ -79,7 +87,8 @@ const LoadsTab: React.FC<LoadsTabProps> = ({
                                         </button>
                                     </td>
                                 </tr>
-                            ))}
+                            );
+                            })}
                             {shipmentsData.Active.filter((s: any) =>
                                 s.status === 'Bidding Open' ||
                                 s.status === 'Finding Driver' ||
@@ -87,7 +96,7 @@ const LoadsTab: React.FC<LoadsTabProps> = ({
                                 s.status === 'Pending Deposit'
                             ).length === 0 && (
                                     <tr>
-                                        <td colSpan={6} className="px-8 py-20 text-center text-slate-400 font-bold">No active load postings.</td>
+                                        <td colSpan={7} className="px-8 py-20 text-center text-slate-400 font-bold">No active load postings.</td>
                                     </tr>
                                 )}
                         </tbody>

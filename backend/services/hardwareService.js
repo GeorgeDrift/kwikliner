@@ -1,4 +1,6 @@
 const pool = require('../db');
+const marketplaceService = require('./marketplaceService');
+const { broadcastMarketUpdate } = require('../socket');
 
 const hardwareService = {
     getProducts: async () => {
@@ -35,11 +37,17 @@ const hardwareService = {
         const sellerName = userRes.rows[0]?.name || 'Unknown';
 
         const row = result.rows[0];
-        return {
+        const product = {
             ...row,
             image: row.images ? row.images[0] : null,
             seller: sellerName
         };
+
+        // SYNC WITH MARKETPLACE
+        await marketplaceService.syncProduct(product);
+        broadcastMarketUpdate();
+
+        return product;
     },
 
     updateProduct: async (ownerId, productId, updates) => {
@@ -57,10 +65,16 @@ const hardwareService = {
         if (result.rows.length === 0) throw new Error('Product not found or unauthorized');
 
         const row = result.rows[0];
-        return {
+        const updatedProduct = {
             ...row,
             image: row.images ? row.images[0] : null
         };
+
+        // SYNC WITH MARKETPLACE
+        await marketplaceService.syncProduct(updatedProduct);
+        broadcastMarketUpdate();
+
+        return updatedProduct;
     },
 
     deleteProduct: async (ownerId, productId) => {

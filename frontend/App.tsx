@@ -16,17 +16,21 @@ import VerifyEmail from './pages/VerifyEmail';
 import { User, UserRole } from './types';
 
 const App: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    const saved = localStorage.getItem('kwikliner_user');
+    return saved ? JSON.parse(saved) : null;
+  });
 
   // Persistence: Validate token and fetch fresh user data on load
   useEffect(() => {
     const validateSession = async () => {
-      const token = localStorage.getItem('token'); // Assuming token is stored with key 'token'
+      const token = localStorage.getItem('token');
       const savedUser = localStorage.getItem('kwikliner_user');
 
       if (!token) {
         // Clear any stale user data if no token
         if (savedUser) localStorage.removeItem('kwikliner_user');
+        setUser(null);
         return;
       }
 
@@ -47,11 +51,8 @@ const App: React.FC = () => {
         }
       } catch (error) {
         console.error('Error validating session:', error);
-        // On network error, we might want to keep the local user state but maybe show a warning?
-        // For now, let's fall back to savedUser if available, but simplest is to do nothing or logout.
-        // If we strictly want real-time verified auth, we should probably logout or retry.
-        // Let's rely on the savedUser for offline/error cases but ideally prompt re-login.
-        if (savedUser) setUser(JSON.parse(savedUser));
+        // On network error, clear user to be safe and force re-login
+        handleLogout();
       }
     };
 
@@ -67,6 +68,7 @@ const App: React.FC = () => {
     setUser(null);
     localStorage.removeItem('kwikliner_user');
     localStorage.removeItem('token');
+    // Navigate to home will be handled by useEffect watching user state
   };
 
   const [mobileMenuAction, setMobileMenuAction] = useState(0);
@@ -84,10 +86,14 @@ const App: React.FC = () => {
                   path="/register"
                   element={<RegistrationFlow onRegister={handleUpdateUser} />}
                 />
-                <Route path="/verify-email" element={<VerifyEmail />} />
+                <Route
+                  path="/login"
+                  element={<RegistrationFlow onRegister={handleUpdateUser} defaultMode="login" />}
+                />
+                <Route path="/verify-email" element={<VerifyEmail onVerify={handleUpdateUser} />} />
                 <Route
                   path="/settings"
-                  element={user ? <Settings user={user} onUpdate={handleUpdateUser} /> : <Navigate to="/register" />}
+                  element={user ? <Settings user={user} onUpdate={handleUpdateUser} /> : <Navigate to="/login" />}
                 />
 
                 {/* Protected Dashboard Routes */}
@@ -95,7 +101,7 @@ const App: React.FC = () => {
                   path="/dashboard"
                   element={
                     !user ? (
-                      <Navigate to="/register" />
+                      <Navigate to="/login" />
                     ) : user.role === UserRole.ADMIN ? (
                       <AdminDashboard user={user} onLogout={handleLogout} mobileMenuAction={mobileMenuAction} />
                     ) : user.role === UserRole.SHIPPER ? (

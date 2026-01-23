@@ -18,7 +18,7 @@ const Navbar: React.FC<NavbarProps & { onMenuToggle?: () => void }> = ({ user, o
     <nav className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-[100] shadow-sm transition-colors duration-200">
       <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
-          <Link to="/" className="flex items-center space-x-2">
+          <Link to="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity z-50">
             <div className="bg-blue-600 p-2 rounded-lg shadow-md shadow-blue-200">
               <Truck className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
             </div>
@@ -29,22 +29,24 @@ const Navbar: React.FC<NavbarProps & { onMenuToggle?: () => void }> = ({ user, o
             {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
-              className="p-2 rounded-full text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors"
+              className="p-2 rounded-full text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors cursor-pointer z-50"
+              type="button"
+              title="Toggle theme"
             >
               {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5 text-amber-400" />}
             </button>
 
-            <Link to="/" className="hidden md:flex items-center text-slate-600 dark:text-slate-300 hover:text-blue-600 font-semibold text-sm">
+            <Link to="/" className="hidden md:flex items-center text-slate-600 dark:text-slate-300 hover:text-blue-600 font-semibold text-sm transition-colors z-50">
               <LayoutGrid className="h-4 w-4 mr-1" /> Marketplace
             </Link>
 
             {user ? (
               <>
-                <Link to="/dashboard" className="hidden sm:block text-slate-600 dark:text-slate-300 hover:text-blue-600 font-semibold text-sm px-3 py-2">
+                <Link to="/dashboard" className="hidden sm:block text-slate-600 dark:text-slate-300 hover:text-blue-600 font-semibold text-sm px-3 py-2 transition-colors z-50">
                   Dashboard
                 </Link>
                 <div className="flex items-center space-x-2 sm:space-x-4 pl-2 sm:pl-4 border-l border-slate-200 dark:border-slate-700">
-                  <button className="text-slate-400 hover:text-blue-600 hidden xs:block">
+                  <button className="text-slate-400 hover:text-blue-600 hidden xs:block transition-colors cursor-pointer z-50" type="button" title="Notifications">
                     <Bell className="h-5 w-5" />
                   </button>
                   <div className="flex items-center space-x-2">
@@ -53,25 +55,36 @@ const Navbar: React.FC<NavbarProps & { onMenuToggle?: () => void }> = ({ user, o
                     </div>
                     <span className="hidden lg:inline text-sm font-bold text-slate-700 dark:text-slate-200">{user.name}</span>
                   </div>
-                  <button onClick={() => { onLogout(); navigate('/'); }} className="p-2 text-slate-400 hover:text-red-500 hidden sm:block" title="Logout">
+                  <button onClick={() => { onLogout(); navigate('/'); }} className="p-2 text-slate-400 hover:text-red-500 hidden sm:block transition-colors cursor-pointer z-50" title="Logout" type="button">
                     <LogOut className="h-5 w-5" />
                   </button>
 
                   {/* MOBILE MENU TRIGGER */}
                   <button
                     onClick={onMenuToggle}
-                    className="md:hidden h-10 w-10 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all border border-slate-100 dark:border-slate-700"
+                    className="md:hidden h-10 w-10 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all border border-slate-100 dark:border-slate-700 cursor-pointer z-50"
+                    type="button"
                   >
                     <Menu size={20} />
                   </button>
                 </div>
               </>
             ) : (
-              <div className="flex items-center space-x-4">
-                <Link to="/register" state={{ isLogin: true }} className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-bold text-sm">Log In</Link>
-                <Link to="/register" className="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 dark:shadow-blue-900/50 text-sm">
+              <div className="flex items-center space-x-4 z-50">
+                <button 
+                  onClick={() => navigate('/login')} 
+                  className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-bold text-sm transition-colors cursor-pointer"
+                  type="button"
+                >
+                  Log In
+                </button>
+                <button 
+                  onClick={() => navigate('/register')} 
+                  className="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 dark:shadow-blue-900/50 text-sm cursor-pointer"
+                  type="button"
+                >
                   Register
-                </Link>
+                </button>
               </div>
             )}
           </div>

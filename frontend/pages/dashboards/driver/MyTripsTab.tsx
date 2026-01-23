@@ -5,7 +5,7 @@ import { api } from '../../../services/api';
 interface MyTripsTabProps {
     jobs: any[];
     handleAcceptJob: (id: string) => void;
-    loadData: () => Promise<void>;
+    loadData?: () => Promise<void>;
 }
 
 const MyTripsTab: React.FC<MyTripsTabProps> = ({ jobs, handleAcceptJob, loadData }) => {
@@ -48,7 +48,7 @@ const MyTripsTab: React.FC<MyTripsTabProps> = ({ jobs, handleAcceptJob, loadData
                                         <button
                                             onClick={async () => {
                                                 await api.updateTripxStatus(job.id, 'Delivered');
-                                                loadData();
+                                                loadData?.();
                                                 alert("Trip marked as Delivered! Shipper will be notified.");
                                             }}
                                             className="w-full py-4 bg-blue-600 text-white rounded-[20px] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-blue-100 dark:shadow-none hover:scale-105 transition-all"
@@ -61,7 +61,7 @@ const MyTripsTab: React.FC<MyTripsTabProps> = ({ jobs, handleAcceptJob, loadData
                                         <button
                                             onClick={async () => {
                                                 await api.updateTripxStatus(job.id, 'In Transit');
-                                                loadData();
+                                                loadData?.();
                                             }}
                                             className="w-full py-4 bg-indigo-600 text-white rounded-[20px] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-indigo-100 dark:shadow-none hover:scale-105 transition-all"
                                         >
