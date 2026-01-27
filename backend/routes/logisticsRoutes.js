@@ -14,6 +14,8 @@ router.delete('/fleet/:vehicleId', logisticsController.deleteVehicle);
 router.get('/stats', logisticsController.getStats);
 router.get('/drivers', logisticsController.getDrivers);
 router.get('/listings', logisticsController.getListings);
+router.delete('/listings/:id', logisticsController.deleteListing);
 router.get('/analytics', logisticsController.getRevenueAnalytics);
+router.get('/trips', logisticsController.getTrips);
 
 module.exports = router;

@@ -30,7 +30,7 @@ const Settings: React.FC<SettingsProps> = ({ user, onUpdate }) => {
 
   const [paymentAccounts, setPaymentAccounts] = useState<Required<User>['paymentAccounts']>(user.paymentAccounts || [
     { id: '1', type: 'BANK', name: 'Standard Bank', description: 'Personal Account **** 4756', isPrimary: user.primaryPayoutMethod === 'BANK' },
-    { id: '2', type: 'MOBILE_MONEY', name: 'Airtel Money', description: '+265 999 123 456', isPrimary: user.primaryPayoutMethod === 'MOBILE_MONEY' }
+    { id: '2', type: 'MOBILE_MONEY', name: 'Airtel Money', description: '0999123456', isPrimary: user.primaryPayoutMethod === 'MOBILE_MONEY' }
   ]);
 
   const [fleet, setFleet] = useState<Vehicle[]>([
@@ -167,15 +167,21 @@ const Settings: React.FC<SettingsProps> = ({ user, onUpdate }) => {
                 <input
                   value={formData.name}
                   onChange={e => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full p-6 bg-slate-50 dark:bg-slate-900/50 dark:text-white rounded-[28px] font-black outline-none border-2 border-transparent focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 transition-all shadow-sm"
+                  className="w-full p-6 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white rounded-[28px] font-black outline-none border-2 border-transparent focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 transition-all shadow-sm"
                 />
               </div>
               <div className="space-y-3">
                 <label className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Contact Phone</label>
                 <input
+                  type="tel"
+                  maxLength={10}
+                  placeholder="0991234567"
                   value={formData.phone}
-                  onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full p-6 bg-slate-50 dark:bg-slate-900/50 dark:text-white rounded-[28px] font-black outline-none border-2 border-transparent focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 transition-all shadow-sm"
+                  onChange={e => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setFormData({ ...formData, phone: val });
+                  }}
+                  className="w-full p-6 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white rounded-[28px] font-black outline-none border-2 border-transparent focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 transition-all shadow-sm"
                 />
               </div>
               <div className="space-y-3 md:col-span-2">
@@ -183,7 +189,7 @@ const Settings: React.FC<SettingsProps> = ({ user, onUpdate }) => {
                 <input
                   value={formData.email}
                   onChange={e => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full p-6 bg-slate-50 dark:bg-slate-900/50 dark:text-white rounded-[28px] font-black outline-none border-2 border-transparent focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 transition-all shadow-sm"
+                  className="w-full p-6 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white rounded-[28px] font-black outline-none border-2 border-transparent focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 transition-all shadow-sm"
                 />
               </div>
             </div>
@@ -465,11 +471,25 @@ const Settings: React.FC<SettingsProps> = ({ user, onUpdate }) => {
               </div>
               <div className="space-y-2">
                 <label className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">{newAccount.type === 'BANK' ? 'Bank Name' : 'Provider (MoMo)'}</label>
-                <input required value={newAccount.name} onChange={e => setNewAccount({ ...newAccount, name: e.target.value })} placeholder={newAccount.type === 'BANK' ? 'e.g. Standard Bank' : 'e.g. Airtel Money'} className="w-full p-5 bg-slate-50 dark:bg-slate-900/50 dark:text-white rounded-2xl font-black outline-none border-2 border-transparent focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 transition-all placeholder:text-slate-300 dark:placeholder:text-slate-700" />
+                <input required value={newAccount.name} onChange={e => setNewAccount({ ...newAccount, name: e.target.value })} placeholder={newAccount.type === 'BANK' ? 'e.g. Standard Bank' : 'e.g. Airtel Money'} className="w-full p-5 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white rounded-2xl font-black outline-none border-2 border-transparent focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 transition-all placeholder:text-slate-300 dark:placeholder:text-slate-700" />
               </div>
               <div className="space-y-2">
                 <label className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">{newAccount.type === 'BANK' ? 'Account Number' : 'Phone Number'}</label>
-                <input required value={newAccount.description} onChange={e => setNewAccount({ ...newAccount, description: e.target.value })} placeholder={newAccount.type === 'BANK' ? '**** **** 1234' : '+265 999 000 000'} className="w-full p-5 bg-slate-50 dark:bg-slate-900/50 dark:text-white rounded-2xl font-black outline-none border-2 border-transparent focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 transition-all placeholder:text-slate-300 dark:placeholder:text-slate-700" />
+                <input
+                  required
+                  type={newAccount.type === 'MOBILE_MONEY' ? 'tel' : 'text'}
+                  maxLength={newAccount.type === 'MOBILE_MONEY' ? 10 : 25}
+                  value={newAccount.description}
+                  onChange={e => {
+                    let val = e.target.value;
+                    if (newAccount.type === 'MOBILE_MONEY') {
+                      val = val.replace(/\D/g, '').slice(0, 10);
+                    }
+                    setNewAccount({ ...newAccount, description: val });
+                  }}
+                  placeholder={newAccount.type === 'BANK' ? '**** **** 1234' : '0999 000 000'}
+                  className="w-full p-5 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white rounded-2xl font-black outline-none border-2 border-transparent focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 transition-all placeholder:text-slate-300 dark:placeholder:text-slate-700"
+                />
               </div>
               <button type="submit" className="w-full py-6 bg-blue-600 text-white rounded-[32px] font-black uppercase tracking-widest shadow-2xl shadow-blue-200 mt-4">
                 Connect Account

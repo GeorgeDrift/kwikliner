@@ -19,7 +19,7 @@ const init = (server) => {
         socket.on('join_room', (userId) => {
             const room = `user_${userId}`;
             socket.join(room);
-            console.log(`Socket ${socket.id} joined room: ${room}`);
+            console.log(`[Socket] User ${userId} joined room: ${room}`);
         });
 
         socket.on('request_market_data', async () => {
@@ -72,11 +72,24 @@ const init = (server) => {
         // Specific request for a shipper's pending bids
         socket.on('request_shipper_bids', async (userId) => {
             try {
+                // Modified query to handle missing user rating column
+                // We'll join with vehicle_listings or use default if not available
                 const result = await require('./db').query(`
-                    SELECT b.*, s.route, s.cargo, u.name as driver_name, u.rating as driver_rating
+                    SELECT 
+                        b.*, 
+                        s.route, 
+                        s.cargo, 
+                        u.name as driver_name,
+                        COALESCE(vl.rating, 5.0) as driver_rating,
+                        COALESCE(vl.vehicle_type, 'Truck') as vehicle_type
                     FROM bids b
                     JOIN shipments s ON b.load_id = s.id
                     JOIN users u ON b.driver_id = u.id
+                    LEFT JOIN (
+                        SELECT DISTINCT ON (driver_id) driver_id, rating, vehicle_type 
+                        FROM vehicle_listings 
+                        ORDER BY driver_id, created_at DESC
+                    ) vl ON b.driver_id = vl.driver_id
                     WHERE s.shipper_id = $1 AND b.status = 'Pending'
                     ORDER BY b.created_at DESC
                 `, [userId]);

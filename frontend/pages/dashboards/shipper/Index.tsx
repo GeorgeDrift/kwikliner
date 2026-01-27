@@ -144,15 +144,45 @@ const ShipperDashboard: React.FC<ShipperDashboardProps> = ({ user, onLogout, mob
    const loadData = async () => {
       try {
          // CRITICAL DATA: Load first to unblock UI
-         const [statsData] = await Promise.all([
+         const [statsData, initialLoads] = await Promise.all([
             api.getShipperStats().catch(e => { console.error("getShipperStats failed:", e); return { totalShipments: 0, activeShipments: 0, totalSpend: 0, growth: 0 }; }),
+            api.getShipperLoads().catch(e => { console.error("getShipperLoads failed:", e); return []; })
          ]);
+
+         if (initialLoads && initialLoads.length > 0) {
+            const partitioned = initialLoads.reduce((acc: any, s: any) => {
+               if (['Completed', 'Delivered'].includes(s.status)) acc.Completed.push(s);
+               else if (['Rejected', 'Cancelled'].includes(s.status)) acc.Rejected.push(s);
+               else acc.Active.push(s);
+
+               if (['Completed', 'Delivered', 'Rejected', 'Cancelled'].includes(s.status)) acc.History.push(s);
+               return acc;
+            }, { Active: [], Rejected: [], Completed: [], History: [] });
+            setShipmentsData(partitioned);
+         }
 
          setIsLoading(false); // <--- HIDE SPINNER EARLY
 
          // NON-CRITICAL DATA: Load in background
          api.getLogisticsServices().then(setLogisticsServices).catch(() => { });
          api.getProducts().then(setMarketProducts).catch(() => { });
+
+         // Fetch initial bids via REST as fallback for Socket.IO
+         api.getShipperBids().then((bds: any[]) => {
+            if (bds) {
+               setAvailableBids(bds.map((b: any) => ({
+                  id: b.id,
+                  loadId: b.load_id,
+                  driver: b.driver_name,
+                  amount: `MWK ${parseFloat((b.amount || '0').toString().replace(/[^0-9.]/g, '')).toLocaleString()}`,
+                  rating: b.driver_rating || 5.0,
+                  truck: b.vehicle_type || 'Truck',
+                  jobs: b.previous_jobs || 0,
+                  eta: '2h'
+               })));
+            }
+         }).catch(() => { });
+
          api.getAvailableFleets().then(setAvailableFleets).catch(() => { });
 
          setStats(statsData);
@@ -193,29 +223,42 @@ const ShipperDashboard: React.FC<ShipperDashboardProps> = ({ user, onLogout, mob
                details: s.order_ref
             }));
 
-            setShipmentsData({
-               Active: mappedLoads.filter((s: any) => ['Bidding Open', 'Finding Driver', 'Waiting for Driver Commitment', 'Pending Deposit', 'Active (Waiting Delivery)', 'In Transit', 'Delivered'].includes(s.status)),
-               Rejected: mappedLoads.filter((s: any) => s.status === 'Rejected'),
-               Completed: mappedLoads.filter((s: any) => s.status === 'Completed'),
-               History: mappedLoads.filter((s: any) => s.status === 'Completed' || s.status === 'Delivered')
-            });
+            const partitioned = mappedLoads.reduce((acc: any, s: any) => {
+               if (['Completed', 'Delivered'].includes(s.status)) acc.Completed.push(s);
+               else if (['Rejected', 'Cancelled'].includes(s.status)) acc.Rejected.push(s);
+               else acc.Active.push(s);
+
+               if (['Completed', 'Delivered', 'Rejected', 'Cancelled'].includes(s.status)) acc.History.push(s);
+               return acc;
+            }, { Active: [], Rejected: [], Completed: [], History: [] });
+
+            setShipmentsData(partitioned);
          }
       });
 
       newSocket.on('shipper_bids_update', (bds: any[]) => {
-         console.log('Shipper Socket: Private bids update', bds?.length);
-         if (bds) {
-            setAvailableBids(bds.map((b: any) => ({
+         console.log('Shipper Socket: Private bids update received:', bds);
+         if (bds && Array.isArray(bds)) {
+            const mapped = bds.map((b: any) => ({
                id: b.id,
                loadId: b.load_id,
-               driver: b.driver_name,
-               amount: `MWK ${parseFloat(b.amount).toLocaleString()}`,
+               driver: b.driver_name || 'Unknown Driver',
+               amount: `MWK ${parseFloat((b.amount || '0').toString().replace(/[^0-9.]/g, '')).toLocaleString()}`,
                rating: b.driver_rating || 5.0,
                truck: b.vehicle_type || 'Truck',
                jobs: b.previous_jobs || 0,
-               eta: '2h'
-            })));
+               eta: '2h',
+               raw: b // Keep raw for debug
+            }));
+            console.log('Mapped bids for state:', mapped);
+            setAvailableBids(mapped);
          }
+      });
+
+      newSocket.on('deposit_reminder', (data: any) => {
+         console.log('Shipper Socket: Deposit reminder received:', data);
+         addToast(data.message, 'info');
+         // Sound or vibration could be added here
       });
 
       return () => {
@@ -226,10 +269,20 @@ const ShipperDashboard: React.FC<ShipperDashboardProps> = ({ user, onLogout, mob
    const menuSections = {
       MAIN: [
          { id: 'Overview', icon: <LayoutGrid size={20} />, label: 'Overview' },
-         { id: 'Loads', icon: <Package size={20} />, label: 'Load Postings', badge: shipmentsData.Active.filter(s => s.status === 'Bidding Open' || s.status === 'Finding Driver' || !s.driver_id).length },
+         {
+            id: 'Loads',
+            icon: <Package size={20} />,
+            label: 'Load Postings',
+            badge: shipmentsData.Active.filter(s => ['Bidding Open', 'Finding Driver'].includes(s.status)).length
+         },
          { id: 'Jobs', icon: <Briefcase size={20} />, label: 'My Jobs' },
-         { id: 'Shipments', icon: <Truck size={20} />, label: 'My Shipments', badge: shipmentsData.Active.filter(s => (s.driver_id || s.assigned_driver_id) && ['In Transit', 'Pending Deposit', 'Waiting for Driver Commitment', 'Active (Waiting Delivery)', 'Ready for Pickup'].includes(s.status)).length },
-         { id: 'Marketplace', icon: <UserCheck size={20} />, label: 'Hire Drivers' },
+         {
+            id: 'Shipments',
+            icon: <Truck size={20} />,
+            label: 'My Shipments',
+            badge: shipmentsData.Active.filter(s => ['In Transit', 'Approved / Waiting Pick up', 'Waiting for Driver Commitment', 'Pending Deposit', 'Active (Waiting Delivery)', 'Ready for Pickup', 'Handshake'].includes(s.status)).length
+         },
+         { id: 'Marketplace', icon: <UserCheck size={20} />, label: 'Hire Drivers', badge: availableBids.length },
          { id: 'Market', icon: <ShoppingCart size={20} />, label: 'KwikShop' },
       ],
       COMMUNICATION: [
@@ -350,28 +403,24 @@ const ShipperDashboard: React.FC<ShipperDashboardProps> = ({ user, onLogout, mob
    };
 
    const handleConfirmPayment = async (type: 'online' | 'physical' | 'later', details?: { phoneNumber: string, providerRefId: string }) => {
-      if (!activePaymentShipmentId) return;
+      if (!activePaymentShipmentId || !details) return;
 
       try {
-         if (type === 'online' && details) {
-            const activeShipment = shipmentsData.Active.find(s => s.id === activePaymentShipmentId);
-            const amountStr = activeShipment ? (activeShipment.price || '0').toString().replace(/[^0-9.]/g, '') : '0';
-            const amount = parseFloat(amountStr);
+         const activeShipment = shipmentsData.Active.find(s => s.id === activePaymentShipmentId);
+         const amountStr = activeShipment ? (activeShipment.price || '0').toString().replace(/[^0-9.]/g, '') : '0';
+         const amount = parseFloat(amountStr) || 0;
 
-            const res = await api.initiatePayment({
-               rideId: activePaymentShipmentId,
-               amount: amount,
-               mobileNumber: details.phoneNumber,
-               providerRefId: details.providerRefId
-            });
+         const res = await api.initiatePayment({
+            rideId: activePaymentShipmentId,
+            amount: amount,
+            mobileNumber: details.phoneNumber,
+            providerRefId: details.providerRefId
+         });
 
-            if (res.status === 'success' || res.charge_id) {
-               addToast(`Payment initiated! Please check your phone (${details.phoneNumber}) to confirm.`, 'info');
-            } else {
-               addToast(`Payment failed: ${res.error || res.message || 'Unknown error'}`, 'error');
-            }
+         if (res.status === 'success' || res.charge_id) {
+            addToast(`Payment initiated! Please check your phone (${details.phoneNumber}) to confirm.`, 'info');
          } else {
-            addToast(`Payment via ${type} recorded. Waiting for verification.`, 'success');
+            addToast(`Payment failed: ${res.error || res.message || 'Unknown error'}`, 'error');
          }
 
          setIsPaymentModalOpen(false);
@@ -555,7 +604,8 @@ const ShipperDashboard: React.FC<ShipperDashboardProps> = ({ user, onLogout, mob
                   marketItems={marketItems}
                   hiringUrgency={hiringUrgency}
                   setHiringUrgency={setHiringUrgency}
-                  VehicleSlider={VehicleSlider}
+                  marketFilter={marketFilter}
+                  setMarketFilter={setMarketFilter}
                   handleDirectHire={handleDirectHire}
                />
             );

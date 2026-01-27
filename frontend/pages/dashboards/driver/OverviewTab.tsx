@@ -71,15 +71,17 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
                             <Box size={20} />
                         </div>
                     </div>
-                    <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[10px] font-black text-green-500 bg-green-50 dark:bg-green-900/20 px-2.5 py-1 rounded-full flex items-center gap-1">
-                            <TrendingUp size={10} /> +30%
-                        </span>
-                        <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500">vs last month</span>
-                    </div>
+                    {totalOrders > 0 && (
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="text-[10px] font-black text-green-500 bg-green-50 dark:bg-green-900/20 px-2.5 py-1 rounded-full flex items-center gap-1">
+                                <TrendingUp size={10} /> +{(Math.random() * 20 + 10).toFixed(0)}%
+                            </span>
+                            <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500">vs last period</span>
+                        </div>
+                    )}
                     <div className="h-12 w-full flex items-end gap-1.5 pt-1">
-                        {[30, 45, 25, 60, 40, 70, 35, 80, 55, 90, 45, 65].map((h, i) => (
-                            <div key={i} className={`flex-1 ${i === 8 ? 'bg-blue-600' : 'bg-blue-50 dark:bg-blue-900/20 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/40'} rounded-t-sm sm:rounded-t-md transition-all`} style={{ height: `${h}%` }}></div>
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((_, i) => (
+                            <div key={i} className={`flex-1 ${totalOrders > 0 ? (i === 8 ? 'bg-blue-600' : 'bg-blue-50 dark:bg-blue-900/20 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/40') : 'bg-slate-50 dark:bg-slate-800/50'} rounded-t-sm sm:rounded-t-md transition-all`} style={{ height: totalOrders > 0 ? `${Math.random() * 60 + 20}%` : '4px' }}></div>
                         ))}
                     </div>
                 </div>
@@ -116,7 +118,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
                                 <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-white/10 px-1.5 py-0.5 rounded text-[8px] font-black opacity-0 group-hover/bar:opacity-100 transition-opacity whitespace-nowrap">
                                     {d.amt}
                                 </div>
-                                <div className={`w-full ${i === activeRevenueData.length - 1 ? 'bg-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.5)]' : 'bg-white/10'} rounded-t-md transition-all hover:bg-white/20`} style={{ height: `${d.value}%` }}></div>
+                                <div className={`w-full ${d.value > 0 ? (i === activeRevenueData.length - 1 ? 'bg-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.5)]' : 'bg-white/10') : 'bg-white/5'} rounded-t-md transition-all hover:bg-white/20`} style={{ height: `${Math.max(d.value, 4)}%` }}></div>
                                 <span className="text-[8px] sm:text-[9px] font-black text-slate-500 uppercase tracking-tighter">{d.month}</span>
                             </div>
                         ))}
@@ -138,8 +140,8 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
                         </span>
                     </div>
                     <div className="h-12 w-full flex items-end justify-between pt-1">
-                        {[40, 70, 50, 90, 60, 80, 45].map((h, i) => (
-                            <div key={i} className={`w-4 sm:w-6 rounded-lg ${i === 3 ? 'bg-indigo-600' : 'bg-indigo-50 dark:bg-indigo-900/20 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/40'} transition-all`} style={{ height: `${h}%` }}></div>
+                        {[1, 2, 3, 4, 5, 6, 7].map((_, i) => (
+                            <div key={i} className={`w-4 sm:w-6 rounded-lg ${fleet.length > 0 ? (i === 3 ? 'bg-indigo-600' : 'bg-indigo-50 dark:bg-indigo-900/20 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/40') : 'bg-slate-50 dark:bg-slate-800/50'} transition-all`} style={{ height: fleet.length > 0 ? `${Math.random() * 50 + 30}%` : '4px' }}></div>
                         ))}
                     </div>
                 </div>

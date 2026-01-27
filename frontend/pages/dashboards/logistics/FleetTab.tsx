@@ -1,16 +1,19 @@
 import React from 'react';
-import { Plus, Truck, Box, Activity, Trash2 } from 'lucide-react';
+import { Plus, Truck, Box, Activity, Trash2, Globe } from 'lucide-react';
+import VehicleSlider from '../../../components/VehicleSlider';
 
 interface FleetTabProps {
     fleet: any[];
     setIsAddVehicleOpen: (open: boolean) => void;
     handleDeleteVehicle: (id: string) => void;
+    onPostVehicle: (vehicle: any) => void;
 }
 
 const FleetTab: React.FC<FleetTabProps> = ({
     fleet,
     setIsAddVehicleOpen,
-    handleDeleteVehicle
+    handleDeleteVehicle,
+    onPostVehicle
 }) => {
     return (
         <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-500">
@@ -30,9 +33,18 @@ const FleetTab: React.FC<FleetTabProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {fleet.map((vehicle) => (
                     <div key={vehicle.id} className="bg-white dark:bg-slate-800 rounded-[40px] border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden hover:shadow-2xl transition-all group">
-                        <div className="h-56 overflow-hidden relative">
-                            <img src={vehicle.image} alt={vehicle.model} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                            <div className="absolute top-4 left-4">
+                        <div className="h-56 overflow-hidden relative bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800">
+                            {vehicle.images && vehicle.images.length > 0 ? (
+                                <VehicleSlider images={vehicle.images} />
+                            ) : vehicle.image ? (
+                                <img src={vehicle.image} alt={vehicle.model} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                            ) : (
+                                <div className="w-full h-full flex flex-col items-center justify-center text-slate-200 dark:text-slate-800">
+                                    <Truck size={64} strokeWidth={1} />
+                                    <p className="text-[10px] font-black uppercase tracking-widest mt-2">No Photo</p>
+                                </div>
+                            )}
+                            <div className="absolute top-4 left-4 z-10">
                                 <span className={`px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest shadow-lg ${vehicle.status === 'Available' ? 'bg-green-500 text-white' :
                                     vehicle.status === 'In Transit' ? 'bg-blue-500 text-white' : 'bg-orange-500 text-white'
                                     }`}>
@@ -61,8 +73,8 @@ const FleetTab: React.FC<FleetTabProps> = ({
                             </div>
 
                             <div className="flex gap-3 pt-4 border-t border-slate-50 dark:border-slate-700">
-                                <button className="flex-1 py-2 bg-[#6366F1] text-white rounded-lg font-black text-[10px] uppercase tracking-widest">
-                                    Manage
+                                <button onClick={() => onPostVehicle(vehicle)} className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-black text-[10px] uppercase tracking-widest transition-colors flex items-center justify-center gap-2">
+                                    <Globe size={14} /> Post to Market
                                 </button>
                                 <button
                                     onClick={() => handleDeleteVehicle(vehicle.id)}

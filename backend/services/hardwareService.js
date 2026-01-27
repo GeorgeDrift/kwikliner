@@ -135,7 +135,7 @@ const hardwareService = {
                 await client.query(
                     `INSERT INTO transactions 
                     (user_id, product_id, gross_amount, commission_amount, net_amount, type, status, transaction_ref)
-                    VALUES ($1, $2, $3, $4, $5, 'Sale', 'COMPLETED', $6)`,
+                    VALUES ($1, $2, $3, $4, $5, 'Sale', 'Completed', $6)`,
                     [item.owner_id, item.id, lineTotal, commission, sellerNet, transactionRef]
                 );
             }
@@ -144,7 +144,7 @@ const hardwareService = {
             await client.query(
                 `INSERT INTO transactions 
                 (user_id, gross_amount, commission_amount, net_amount, type, status, transaction_ref, method)
-                VALUES ($1, $2, 0, $2, 'Purchase', 'COMPLETED', $3, 'Wallet')`,
+                VALUES ($1, $2, 0, $2, 'Purchase', 'Completed', $3, 'Wallet')`,
                 [buyerId, -totalAmount, transactionRef]
             );
 

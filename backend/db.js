@@ -44,8 +44,8 @@ const ensureSchema = async () => {
       await client.query(`
         CREATE TABLE IF NOT EXISTS marketplace_items (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          external_id VARCHAR(255) UNIQUE, -- Link to shipments.id or vehicle_id
-          type VARCHAR(50) NOT NULL, -- 'Cargo', 'Transport', 'Hardware', 'Service'
+          external_id VARCHAR(255) UNIQUE, 
+          type VARCHAR(50) NOT NULL, 
           title VARCHAR(255) NOT NULL,
           description TEXT,
           price NUMERIC,
@@ -59,7 +59,15 @@ const ensureSchema = async () => {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
       `);
-      console.log('Schema verification complete: Marketplace and Shipments tables ensured.');
+      // Fix Vehicles Table
+      await client.query(`
+        ALTER TABLE vehicles 
+        ALTER COLUMN plate DROP NOT NULL,
+        ADD COLUMN IF NOT EXISTS location TEXT,
+        ADD COLUMN IF NOT EXISTS operating_range TEXT,
+        ADD COLUMN IF NOT EXISTS price NUMERIC;
+      `);
+      console.log('Schema verification complete.');
 
     } catch (dbErr) {
       console.error('Schema update failed:', dbErr.message);

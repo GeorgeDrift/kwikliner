@@ -59,10 +59,14 @@ const MarketTab: React.FC<MarketTabProps> = ({
                         <div className="px-2">
                             <h4 className="text-sm font-black text-slate-900 dark:text-white mb-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors uppercase tracking-tight">{item.name}</h4>
                             <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-1.5 line-clamp-1">
-                                <UserIcon size={10} /> {item.provider} • <MapPin size={10} /> {item.location}
+                                <UserIcon size={10} /> {item.metadata?.manufacturer && item.metadata?.model
+                                    ? `${item.metadata.manufacturer} ${item.metadata.model}`
+                                    : item.provider} • <MapPin size={10} /> {item.location}
                             </p>
 
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-2 line-clamp-2">{item.details}</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-2 line-clamp-2">
+                                {item.metadata?.operating_range ? `Range: ${item.metadata.operating_range}` : item.details}
+                            </p>
 
                             {item.cat === 'Cargo' && item.weight && (
                                 <p className="text-xs font-black text-amber-600 mb-3">Weight: {item.weight}</p>

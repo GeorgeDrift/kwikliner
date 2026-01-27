@@ -5,17 +5,29 @@ const marketplaceService = require('./marketplaceService');
 const driverService = {
     getJobs: async (driverId) => {
         const result = await pool.query(`
-            SELECT *, 
-            (bidder_ids @> ARRAY[$1]::UUID[]) as has_bid
-            FROM shipments 
-            WHERE status IN ('Bidding Open', 'Finding Driver')
-            ORDER BY created_at DESC
+            SELECT s.*, 
+            (s.bidder_ids @> ARRAY[$1]::UUID[]) as has_bid,
+            b.amount as my_bid_amount
+            FROM shipments s
+            LEFT JOIN bids b ON s.id = b.load_id AND b.driver_id = $1
+            WHERE s.status IN ('Bidding Open', 'Finding Driver')
+            ORDER BY s.created_at DESC
         `, [driverId]);
         return result.rows;
     },
 
     bidOnLoad: async (driverId, bidData) => {
         const { loadId, amount } = bidData;
+
+        // Sanitize amount (remove "MWK ", commas, etc.)
+        const cleanAmount = typeof amount === 'string' ? parseFloat(amount.replace(/[^0-9.]/g, '')) : amount;
+
+        console.log(`[DriverService] Placing bid on ${loadId} by ${driverId}, raw amount: ${amount}, sanitized: ${cleanAmount}`);
+
+        if (isNaN(cleanAmount)) {
+            console.error(`[DriverService] Invalid bid amount: ${amount}`);
+            throw new Error('Invalid bid amount');
+        }
 
         // Add driver to bidder_ids array in shipments table
         await pool.query(
@@ -25,7 +37,7 @@ const driverService = {
 
         const result = await pool.query(
             'INSERT INTO bids (load_id, driver_id, amount) VALUES ($1, $2, $3) RETURNING *',
-            [loadId, driverId, amount]
+            [loadId, driverId, cleanAmount]
         );
         const bid = result.rows[0];
 
@@ -33,16 +45,30 @@ const driverService = {
         pool.query('SELECT shipper_id FROM shipments WHERE id = $1', [loadId]).then(sRes => {
             if (sRes.rows[0]) {
                 const shipperId = sRes.rows[0].shipper_id;
-                // Update Shippers Shipment list
+
+                // 1. Update Shippers Shipment list (Private Room)
                 pool.query('SELECT * FROM shipments WHERE shipper_id = $1 ORDER BY created_at DESC', [shipperId]).then(allLoads => {
                     notifyUser(shipperId, 'shipper_shipments_update', allLoads.rows);
                 });
-                // Update Shippers Bids list
+
+                // 2. Update Shippers Bids list (Private Room)
+                // Ensure we select fresh data including the new bid
                 pool.query(`
-                    SELECT b.*, s.route, s.cargo, u.name as driver_name, u.rating as driver_rating
+                    SELECT 
+                        b.*, 
+                        s.route, 
+                        s.cargo, 
+                        u.name as driver_name,
+                        COALESCE(vl.rating, 5.0) as driver_rating,
+                        COALESCE(vl.vehicle_type, 'Truck') as vehicle_type
                     FROM bids b
                     JOIN shipments s ON b.load_id = s.id
                     JOIN users u ON b.driver_id = u.id
+                    LEFT JOIN (
+                        SELECT DISTINCT ON (driver_id) driver_id, rating, vehicle_type 
+                        FROM vehicle_listings 
+                        ORDER BY driver_id, created_at DESC
+                    ) vl ON b.driver_id = vl.driver_id
                     WHERE s.shipper_id = $1 AND b.status = 'Pending'
                     ORDER BY b.created_at DESC
                 `, [shipperId]).then(bidsRes => {
@@ -51,6 +77,7 @@ const driverService = {
             }
         });
 
+        console.log(`[DriverService] Bid placed on ${loadId} by ${driverId}, amount: ${amount}`);
         return bid;
     },
 
@@ -99,27 +126,36 @@ const driverService = {
 
     getMyTrips: async (driverId) => {
         const result = await pool.query(`
-            SELECT * FROM shipments 
-            WHERE driver_id = $1 
-               OR assigned_driver_id = $1 
-               OR bidder_ids @> ARRAY[$1]::UUID[]
-            ORDER BY created_at DESC
+            SELECT s.*, b.amount as my_bid_amount
+            FROM shipments s
+            LEFT JOIN bids b ON s.id = b.load_id AND b.driver_id = $1
+            WHERE s.driver_id = $1 
+               OR s.assigned_driver_id = $1 
+               OR s.bidder_ids @> ARRAY[$1]::UUID[]
+            ORDER BY s.created_at DESC
         `, [driverId]);
         return result.rows;
     },
 
     postVehicleListing: async (driverId, data) => {
-        const { driverName, vehicleType, capacity, route, price, images, location } = data;
+        const { driverName, vehicleType, capacity, route, price, images, location, manufacturer, model, operating_range } = data;
+
+        // 1. Save the listing
         const result = await pool.query(`
             INSERT INTO vehicle_listings 
-            (driver_id, driver_name, vehicle_type, capacity, route, price, images, location)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            (driver_id, driver_name, vehicle_type, capacity, route, price, images, location, manufacturer, model, operating_range)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             RETURNING *
-        `, [driverId, driverName, vehicleType, capacity, route, price, images, location]);
+        `, [driverId, driverName, vehicleType, capacity, route, price, images, location, manufacturer, model, operating_range]);
 
         const listing = result.rows[0];
-        // SYNC WITH MARKETPLACE
+
+        // 3. SYNC WITH MARKETPLACE
         await marketplaceService.syncVehicle(listing);
+
+        // 4. BROADCAST TO ALL CLIENTS
+        const { broadcastMarketUpdate } = require('../socket');
+        broadcastMarketUpdate();
 
         return listing;
     },
@@ -141,7 +177,7 @@ const driverService = {
         // 3. Fleet Capacity
         const fleetRes = await pool.query(`
             SELECT COUNT(*) as count, 
-            COALESCE(SUM(CAST(REGEXP_REPLACE(capacity, '[^0-9.]', '', 'g') AS FLOAT)), 0) as capacity 
+            COALESCE(SUM(CAST(NULLIF(REGEXP_REPLACE(capacity, '[^0-9.]', '', 'g'), '') AS FLOAT)), 0) as capacity 
             FROM vehicles WHERE owner_id = $1
         `, [driverId]);
 
@@ -170,6 +206,30 @@ const driverService = {
             marketJobs: parseInt(marketRes.rows[0].total),
             revenue: revenueRes.rows
         };
+    },
+    getMyListings: async (driverId) => {
+        const result = await pool.query(
+            'SELECT * FROM vehicle_listings WHERE driver_id = $1 ORDER BY created_at DESC',
+            [driverId]
+        );
+        return result.rows;
+    },
+    getFleet: async (ownerId) => {
+        const result = await pool.query('SELECT * FROM vehicles WHERE owner_id = $1 ORDER BY created_at DESC', [ownerId]);
+        return result.rows;
+    },
+    triggerDepositReminder: async (loadId) => {
+        const result = await pool.query('SELECT shipper_id, route, cargo FROM shipments WHERE id = $1', [loadId]);
+        if (result.rows.length === 0) throw new Error('Shipment not found');
+        const { shipper_id, route, cargo } = result.rows[0];
+
+        notifyUser(shipper_id, 'deposit_reminder', {
+            shipmentId: loadId,
+            message: `Driver is requesting 50% deposit for ${cargo} (${route})`,
+            type: 'warning'
+        });
+
+        return { success: true };
     }
 };
 

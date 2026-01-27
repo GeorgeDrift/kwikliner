@@ -33,14 +33,48 @@ const BidModal: React.FC<BidModalProps> = ({
                 </div>
 
                 <form onSubmit={handleSubmitBid} className="p-6 sm:p-10 space-y-6 sm:space-y-8">
-                    <div className="bg-blue-50/50 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-blue-100 space-y-2">
-                        <div className="flex justify-between items-center">
-                            <span className="text-[10px] sm:text-[11px] font-black text-blue-600 uppercase tracking-widest">Route Details</span>
-                            <span className="text-xs sm:text-sm font-black text-blue-900">{selectedJob.route}</span>
+                    {/* Job Details & Image */}
+                    <div className="flex gap-4 sm:gap-6 bg-slate-50/50 p-4 rounded-3xl border border-slate-100">
+                        {/* Image */}
+                        <div className="h-24 w-24 sm:h-28 sm:w-28 shrink-0 rounded-2xl bg-white border border-slate-200 overflow-hidden shadow-sm">
+                            {(selectedJob.img || (selectedJob.images && selectedJob.images[0])) ? (
+                                <img
+                                    src={selectedJob.img || selectedJob.images[0]}
+                                    alt="Cargo"
+                                    className="h-full w-full object-cover"
+                                />
+                            ) : (
+                                <div className="h-full w-full flex flex-col items-center justify-center text-slate-300">
+                                    <span className="text-[10px] uppercase font-black">No Image</span>
+                                </div>
+                            )}
                         </div>
-                        <div className="flex justify-between items-center">
-                            <span className="text-[10px] sm:text-[11px] font-black text-blue-600 uppercase tracking-widest">Cargo</span>
-                            <span className="text-xs sm:text-sm font-black text-blue-900">{selectedJob.cargo}</span>
+
+                        {/* Details */}
+                        <div className="flex-grow space-y-2">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cargo</p>
+                                    <p className="text-sm font-black text-slate-900 leading-tight">{selectedJob.cargo || selectedJob.name}</p>
+                                </div>
+                                {selectedJob.weight && (
+                                    <div className="text-right">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Weight</p>
+                                        <p className="text-sm font-black text-slate-900">{selectedJob.weight}</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Route</p>
+                                <p className="text-xs font-bold text-slate-700">{selectedJob.route || selectedJob.location}</p>
+                            </div>
+
+                            {selectedJob.details && (
+                                <div className="pt-2 border-t border-slate-200/50 mt-2">
+                                    <p className="text-[10px] text-slate-500 line-clamp-2 leading-relaxed">{selectedJob.details}</p>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -61,7 +95,7 @@ const BidModal: React.FC<BidModalProps> = ({
                         <p className="text-[10px] font-bold text-slate-400 text-center uppercase tracking-widest">Shipper will review your quote and rating</p>
                     </div>
 
-                    <button type="submit" className="w-full py-4 sm:py-5 bg-blue-600 text-white rounded-2xl sm:rounded-3xl font-black uppercase tracking-widest text-xs sm:text-sm shadow-2xl shadow-blue-200 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3">
+                    <button type="submit" className="w-full py-3 sm:py-3 bg-blue-600 text-white rounded-2xl sm:rounded-3xl font-black uppercase tracking-widest text-xs sm:text-sm shadow-2xl shadow-blue-200 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3">
                         Send Proposal <Send size={20} />
                     </button>
                 </form>

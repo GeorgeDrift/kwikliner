@@ -1,26 +1,37 @@
-import React from 'react';
-import { Plus, Truck, Box, MapPin, DollarSign, X, Megaphone } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, Truck, Box, MapPin, DollarSign, X, Megaphone, Globe } from 'lucide-react';
 import { User } from '../../../types';
 import { api } from '../../../services/api';
+import PostAvailabilityModal from './PostAvailabilityModal';
+import VehicleSlider from '../../../components/VehicleSlider';
 
 interface AvailabilityTabProps {
     user: User;
     listings: any[];
+    onRefresh?: () => Promise<void>;
 }
 
-const AvailabilityTab: React.FC<AvailabilityTabProps> = ({ user, listings }) => {
+const AvailabilityTab: React.FC<AvailabilityTabProps> = ({ user, listings, onRefresh }) => {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
+    const handleSuccess = async () => {
+        // Socket will automatically broadcast the update to all clients
+        // Also refresh the listings state for this component
+        console.log('Vehicle listing posted successfully');
+        if (onRefresh) {
+            await onRefresh();
+        }
+    };
+
     return (
-        <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-500">
+        <div className="space-y-10 animate-in fade-in slide-in-from-right-4 duration-500 pb-20">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
                 <div>
-                    <h3 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tighter">Post Availability</h3>
-                    <p className="text-slate-500 dark:text-slate-400 font-medium mt-1 text-sm sm:text-base">Advertise your fleet and services to attract shippers.</p>
+                    <h3 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tighter">Broadcast Fleet</h3>
+                    <p className="text-slate-500 dark:text-slate-400 font-medium mt-1 text-sm sm:text-base">Advertise your vehicles to attract professional shippers.</p>
                 </div>
                 <button
-                    onClick={() => {
-                        const dummyData = { driverName: user.name, vehicleType: 'Fleet Offering', capacity: 'Mixed', route: 'Lilongwe, Blantyre, Mzuzu', price: 'Negotiable', location: 'Nationwide' };
-                        api.postVehicleAvailability(dummyData).then(() => alert('Availability Posted! Shippers can now see your fleet.'));
-                    }}
+                    onClick={() => setIsModalOpen(true)}
                     className="w-full sm:w-auto bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-100 dark:shadow-none flex items-center justify-center gap-2 hover:scale-105 transition-all"
                 >
                     <Plus size={18} />
@@ -30,57 +41,102 @@ const AvailabilityTab: React.FC<AvailabilityTabProps> = ({ user, listings }) => 
 
             {/* Active Postings */}
             <div>
-                <h4 className="text-sm font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-6">Your Active Postings</h4>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {listings.map((posting) => (
-                        <div key={posting.id} className="bg-white dark:bg-slate-800 rounded-[32px] border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-xl transition-all p-8">
-                            <div className="flex items-start justify-between mb-6">
+                <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-300 dark:text-slate-600 mb-8 ml-1">Your Live Fleet Listings</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {listings.map((posting) => {
+                        const hasImages = posting.images && posting.images.length > 0 && posting.images.some((img: string) => img !== '');
+                        return (
+                            <div key={posting.id} className="bg-white dark:bg-slate-800 rounded-[40px] border border-slate-50 dark:border-slate-700 shadow-sm hover:shadow-2xl transition-all p-5 group flex flex-col justify-between">
                                 <div>
-                                    <h5 className="text-xl font-black text-slate-900 dark:text-white">{user.companyName || 'KwikLine Transport'}</h5>
-                                    <p className="text-xs font-bold text-slate-400 dark:text-slate-500 mt-1">Listed {new Date(posting.created_at).toLocaleDateString()}</p>
-                                </div>
-                                <span className="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-green-500 text-white">
-                                    Active
-                                </span>
-                            </div>
+                                    <div className="h-52 w-full rounded-[32px] bg-slate-50 dark:bg-slate-900 border-4 border-white dark:border-slate-800 shadow-inner overflow-hidden relative mb-6">
+                                        {hasImages ? (
+                                            <VehicleSlider images={posting.images.filter((img: string) => img !== '')} />
+                                        ) : (
+                                            <div className="w-full h-full flex flex-col items-center justify-center text-slate-200 dark:text-slate-800">
+                                                <Truck size={64} strokeWidth={1} />
+                                                <p className="text-[10px] font-black uppercase tracking-widest mt-2">No Gallery</p>
+                                            </div>
+                                        )}
+                                        <div className="absolute top-4 left-4 bg-emerald-500/90 backdrop-blur-md text-white px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-lg z-10">
+                                            Live Listing
+                                        </div>
+                                    </div>
 
-                            <div className="space-y-3 mb-6">
-                                <div className="flex items-center gap-3">
-                                    <Truck className="text-indigo-600 dark:text-indigo-400" size={16} />
-                                    <span className="text-sm font-bold text-slate-900 dark:text-white">{posting.vehicle_type}</span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <Box className="text-blue-600 dark:text-blue-400" size={16} />
-                                    <span className="text-sm font-bold text-slate-900 dark:text-white">Capacity: {posting.capacity}</span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <MapPin className="text-green-600 dark:text-green-400" size={16} />
-                                    <span className="text-sm font-bold text-slate-900 dark:text-white">{posting.route}</span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <DollarSign className="text-green-600 dark:text-green-400" size={16} />
-                                    <span className="text-sm font-black text-green-600 dark:text-green-400">MWK {posting.price}</span>
-                                </div>
-                            </div>
+                                    <div className="px-2">
+                                        <h5 className="text-xl font-black text-slate-900 dark:text-white leading-none tracking-tight mb-2 truncate">
+                                            {(posting.manufacturer && posting.model) ? `${posting.manufacturer} ${posting.model}` : (posting.vehicle_type || 'Transport Unit')}
+                                        </h5>
+                                        <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-6">Listed {new Date(posting.created_at).toLocaleDateString()}</p>
 
-                            <div className="flex gap-2">
-                                <button className="flex-grow py-3 bg-blue-50 dark:bg-slate-900 text-blue-600 dark:text-blue-400 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-blue-100 dark:hover:bg-slate-700 transition-all border border-transparent dark:border-slate-700">
-                                    Edit Posting
-                                </button>
-                                <button className="px-4 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 transition-all border border-transparent dark:border-red-900/50">
-                                    <X size={18} />
-                                </button>
+                                        <div className="space-y-3.5 mb-8">
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-8 w-8 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                                                    <Truck size={16} />
+                                                </div>
+                                                <span className="text-sm font-bold text-slate-600 dark:text-slate-300">{posting.vehicle_type || 'Fleet Vehicle'}</span>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-8 w-8 bg-blue-50 dark:bg-blue-900/30 rounded-xl flex items-center justify-center text-blue-600 dark:text-blue-400">
+                                                    <Box size={16} />
+                                                </div>
+                                                <span className="text-sm font-bold text-slate-600 dark:text-slate-300">{posting.capacity} Tons Cap.</span>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-8 w-8 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                                                    <MapPin size={16} />
+                                                </div>
+                                                <span className="text-sm font-bold text-slate-600 dark:text-slate-300">{posting.location || posting.route}</span>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-8 w-8 bg-orange-50 dark:bg-orange-900/30 rounded-xl flex items-center justify-center text-orange-600 dark:text-orange-400">
+                                                    <DollarSign size={16} />
+                                                </div>
+                                                <span className="text-lg font-black text-slate-900 dark:text-white">MWK {posting.price}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-3 pt-6 border-t border-slate-50 dark:border-slate-700/50">
+                                    <button className="flex-grow py-4 bg-slate-900 dark:bg-slate-700 text-white rounded-[20px] font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2">
+                                        Edit Details
+                                    </button>
+                                    <button
+                                        onClick={async () => {
+                                            if (window.confirm('Are you sure you want to remove this listing from Kwik Shop?')) {
+                                                await api.deleteVehicleListing(posting.id);
+                                                if (onRefresh) await onRefresh();
+                                            }
+                                        }}
+                                        className="px-5 py-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-[20px] hover:bg-red-100 dark:hover:bg-red-900/30 transition-all active:scale-95"
+                                    >
+                                        <X size={20} />
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
 
                     {listings.length === 0 && (
-                        <div className="col-span-1 lg:col-span-2 py-20 bg-white dark:bg-slate-800 rounded-[32px] border border-dashed border-slate-200 dark:border-slate-700 text-center text-slate-400 dark:text-slate-500 font-bold">
-                            No active postings found. Start by creating one!
+                        <div className="col-span-full py-32 bg-white dark:bg-slate-800 rounded-[48px] border-2 border-dashed border-slate-100 dark:border-slate-700 text-center flex flex-col items-center justify-center">
+                            <div className="h-20 w-20 bg-slate-50 dark:bg-slate-900 rounded-3xl flex items-center justify-center text-slate-200 dark:text-slate-700 mb-6">
+                                <Megaphone size={40} />
+                            </div>
+                            <h4 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">No active postings</h4>
+                            <p className="text-slate-400 dark:text-slate-500 font-medium max-w-xs mx-auto mt-2">Publish your first vehicle availability to start getting hired directly.</p>
+                            <button onClick={() => setIsModalOpen(true)} className="mt-8 text-indigo-600 font-black text-xs uppercase tracking-[0.2em] hover:underline">Create Posting Now</button>
                         </div>
                     )}
                 </div>
             </div>
+
+            <PostAvailabilityModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                user={user}
+                onSuccess={handleSuccess}
+                postVehicleAvailability={api.postVehicleAvailability}
+            />
         </div>
     );
 };

@@ -1,11 +1,14 @@
+
 import React from 'react';
 import { MapPin, Package, DollarSign, CheckCircle2, Gavel, Clock, X, Filter, ChevronDown } from 'lucide-react';
+import VehicleSlider from '../../../components/VehicleSlider';
 
 interface BrowseJobsTabProps {
     jobs: any[];
     marketItems: any[];
+    myListings: any[];
     jobsSubTab: string;
-    setJobsSubTab: (tab: 'Market' | 'Requests' | 'Proposed' | 'Rejected') => void;
+    setJobsSubTab: (tab: 'Market' | 'Requests' | 'Proposed' | 'Rejected' | 'Listings') => void;
     jobsLocationFilter: string;
     setJobsLocationFilter: (filter: string) => void;
     handleAcceptJob: (id: string) => void;
@@ -14,8 +17,9 @@ interface BrowseJobsTabProps {
 }
 
 const BrowseJobsTab: React.FC<BrowseJobsTabProps> = ({
-    jobs,
-    marketItems,
+    jobs = [],
+    marketItems = [],
+    myListings = [],
     jobsSubTab,
     setJobsSubTab,
     jobsLocationFilter,
@@ -35,7 +39,8 @@ const BrowseJobsTab: React.FC<BrowseJobsTabProps> = ({
                     <div className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide">
                         <button onClick={() => setJobsSubTab('Market')} className={`px-6 sm:px-8 py-3 sm:py-3.5 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all shrink-0 ${jobsSubTab === 'Market' ? 'bg-blue-600 text-white shadow-xl shadow-blue-100 dark:shadow-none' : 'bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-100 dark:border-slate-700'}`}>Marketplace</button>
                         <button onClick={() => setJobsSubTab('Proposed')} className={`px-6 sm:px-8 py-3 sm:py-3.5 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all shrink-0 ${jobsSubTab === 'Proposed' ? 'bg-blue-600 text-white shadow-xl shadow-blue-100 dark:shadow-none' : 'bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-100 dark:border-slate-700'}`}>My Proposals</button>
-                        <button onClick={() => setJobsSubTab('Requests')} className={`px-6 sm:px-8 py-3 sm:py-3.5 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all shrink-0 ${jobsSubTab === 'Requests' ? 'bg-blue-600 text-white shadow-xl shadow-blue-100 dark:shadow-none' : 'bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-100 dark:border-slate-700'}`}>Direct Requests ({jobs.filter(j => j.type === 'Requests').length})</button>
+                        <button onClick={() => setJobsSubTab('Listings')} className={`px-6 sm:px-8 py-3 sm:py-3.5 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all shrink-0 ${jobsSubTab === 'Listings' ? 'bg-blue-600 text-white shadow-xl shadow-blue-100 dark:shadow-none' : 'bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-100 dark:border-slate-700'}`}>My Listings ({myListings?.length || 0})</button>
+                        <button onClick={() => setJobsSubTab('Requests')} className={`px-6 sm:px-8 py-3 sm:py-3.5 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all shrink-0 ${jobsSubTab === 'Requests' ? 'bg-blue-600 text-white shadow-xl shadow-blue-100 dark:shadow-none' : 'bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-100 dark:border-slate-700'}`}>Direct Requests ({jobs?.filter(j => j.type === 'Requests')?.length || 0})</button>
                         <button onClick={() => setJobsSubTab('Rejected')} className={`px-6 sm:px-8 py-3 sm:py-3.5 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all shrink-0 ${jobsSubTab === 'Rejected' ? 'bg-blue-600 text-white shadow-xl shadow-blue-100 dark:shadow-none' : 'bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-100 dark:border-slate-700'}`}>Rejected</button>
                     </div>
 
@@ -83,98 +88,127 @@ const BrowseJobsTab: React.FC<BrowseJobsTabProps> = ({
                     </div>
                 </div>
 
-                <div className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {/* If Marketplace, show synchronized Cargo from marketItems, else use jobs state */}
+                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                     {(jobsSubTab === 'Market' ?
-                        marketItems.filter(i => i.cat === 'Cargo' && (
+                        (marketItems || []).filter(i => i.cat === 'Cargo' && (
                             jobsLocationFilter === 'All' ||
                             (i.location || '').toLowerCase().includes(jobsLocationFilter.toLowerCase())
                         )) :
-                        jobs.filter(j => j.type === jobsSubTab && (
-                            jobsLocationFilter === 'All' ||
-                            (j.route || j.location || '').toLowerCase().includes(jobsLocationFilter.toLowerCase())
-                        ))
-                    ).map((job: any) => (
-                        <div key={job.id} className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-2xl transition-all group">
-                            <h4 className="text-xl font-black text-slate-900 dark:text-white mb-2 truncate">{job.name || job.route}</h4>
-                            <p className="text-xs font-bold text-blue-500 uppercase tracking-widest mb-6">{job.provider || job.shipper}</p>
-                            <div className="space-y-3 mb-10">
-                                <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 text-sm font-medium">
-                                    <Package size={16} /> {job.details || job.cargo}
+                        jobsSubTab === 'Listings' ?
+                            (myListings || []).filter(l => (
+                                jobsLocationFilter === 'All' ||
+                                (l.location || l.route || '').toLowerCase().includes(jobsLocationFilter.toLowerCase())
+                            )) :
+                            (jobs || []).filter(j => j.type === jobsSubTab && (
+                                jobsLocationFilter === 'All' ||
+                                (j.route || j.location || '').toLowerCase().includes(jobsLocationFilter.toLowerCase())
+                            ))
+                    ).map((job: any) => {
+                        const hasImages = (job.images && job.images.length > 0 && job.images.some((img: string) => img !== '')) || (job.img && job.img !== '');
+                        const displayImages = (job.images && job.images.length > 0) ? job.images.filter((img: string) => img !== '') : (job.img ? [job.img] : []);
+
+                        return (
+                            <div key={job.id} className="bg-white dark:bg-slate-900 p-4 rounded-[24px] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-xl transition-all group overflow-hidden flex flex-col justify-between">
+                                <div>
+                                    <div className="h-28 -mx-4 -mt-4 mb-4 overflow-hidden bg-slate-50 dark:bg-slate-950 relative">
+                                        {hasImages ? (
+                                            <VehicleSlider images={displayImages} />
+                                        ) : (
+                                            <div className="w-full h-full flex flex-col items-center justify-center text-slate-200 dark:text-slate-800 bg-slate-50 dark:bg-slate-900/50">
+                                                <Package size={28} strokeWidth={1} />
+                                                <span className="text-[10px] font-black uppercase tracking-widest mt-1">{job.cat || 'Cargo'}</span>
+                                            </div>
+                                        )}
+                                        <div className="absolute top-2 right-2 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest text-slate-900 dark:text-white shadow-sm z-10">
+                                            {job.cat || 'Cargo'}
+                                        </div>
+                                    </div>
+
+                                    <h4 className="text-base font-black text-slate-900 dark:text-white mb-1 truncate">{job.name || job.route}</h4>
+                                    <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-3 truncate">{job.provider || job.shipper}</p>
+                                    <div className="space-y-2 mb-5">
+                                        <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-xs font-medium truncate">
+                                            <Package size={14} className="shrink-0" /> {job.details || job.cargo}
+                                        </div>
+                                        <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-xs font-medium truncate">
+                                            <MapPin size={14} className="shrink-0" /> {job.location}
+                                        </div>
+                                        <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-xs font-medium">
+                                            <DollarSign size={14} className="shrink-0" />
+                                            <span className={job.priceStr === 'Open to Bids' ? 'text-amber-600 dark:text-amber-400 font-black px-2 py-0.5 bg-amber-50 dark:bg-amber-900/30 rounded-md text-[10px]' : 'font-black text-slate-900 dark:text-white'}>
+                                                {job.has_bid ? `MWK ${parseFloat((job.my_bid_amount || 0).toString()).toLocaleString()}` : (job.priceStr || job.price)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="pt-3 border-t border-slate-50 dark:border-slate-800 flex items-center justify-between mb-4">
+                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{job.date || 'New Load'}</span>
+                                        <span className="text-[9px] font-black text-blue-500 uppercase tracking-widest bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-full">{job.weight || (job.bids ? `${job.bids} Bids` : 'Available')}</span>
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 text-sm font-medium">
-                                    <MapPin size={16} /> {job.location}
-                                </div>
-                                <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 text-sm font-medium">
-                                    <DollarSign size={16} />
-                                    <span className={job.priceStr === 'Open to Bids' ? 'text-amber-600 dark:text-amber-400 font-black px-2 py-0.5 bg-amber-50 dark:bg-amber-900/30 rounded-lg' : 'font-black text-slate-900 dark:text-white'}>
-                                        {job.priceStr || job.price}
-                                    </span>
-                                </div>
-                            </div>
-                            <div className="pt-6 border-t border-slate-50 dark:border-slate-800 flex items-center justify-between mb-6">
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{job.date || 'New Load'}</span>
-                                <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">{job.weight || (job.bids ? `${job.bids} Bids` : 'Available')}</span>
-                            </div>
-                            {jobsSubTab === 'Market' ? (
-                                <div className="space-y-2">
-                                    {job.pricingType === 'Direct' || (job.priceStr && job.priceStr !== 'Open to Bids') ? (
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <button
-                                                onClick={() => handleAcceptJob(job.id)}
-                                                className="py-4 bg-blue-600 text-white hover:bg-blue-700 rounded-[20px] font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-blue-100 dark:shadow-none transition-all hover:scale-[1.02] active:scale-95"
-                                            >
-                                                Accept <CheckCircle2 size={14} />
-                                            </button>
+
+                                {jobsSubTab === 'Market' ? (
+                                    <div className="space-y-2">
+                                        {job.pricingType === 'Direct' || (job.priceStr && job.priceStr !== 'Open to Bids') ? (
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <button
+                                                    onClick={() => handleAcceptJob(job.id)}
+                                                    className="py-3.5 bg-blue-600 text-white hover:bg-blue-700 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-1.5 shadow-lg shadow-blue-100 dark:shadow-none transition-all hover:scale-[1.02] active:scale-95"
+                                                >
+                                                    Accept <CheckCircle2 size={13} />
+                                                </button>
+                                                <button
+                                                    onClick={() => { setSelectedJob(job); setIsBidModalOpen(true); }}
+                                                    className="py-3.5 bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                                                >
+                                                    Bid <Gavel size={13} />
+                                                </button>
+                                            </div>
+                                        ) : (
                                             <button
                                                 onClick={() => { setSelectedJob(job); setIsBidModalOpen(true); }}
-                                                className="py-4 bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 rounded-[20px] font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                                                className="w-full py-4 bg-amber-500 text-white rounded-xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-amber-100 dark:shadow-none transition-all hover:scale-[1.02] active:scale-95 hover:bg-amber-600"
                                             >
-                                                Negotiate <Gavel size={14} />
+                                                Propose Price <Gavel size={15} />
                                             </button>
-                                        </div>
-                                    ) : (
-                                        <button
-                                            onClick={() => { setSelectedJob(job); setIsBidModalOpen(true); }}
-                                            className="w-full py-4 bg-amber-500 text-white rounded-[20px] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-amber-100 dark:shadow-none transition-all hover:scale-[1.02] active:scale-95 hover:bg-amber-600"
-                                        >
-                                            Propose Price <Gavel size={16} />
-                                        </button>
-                                    )}
-                                </div>
-                            ) : jobsSubTab === 'Requests' ? (
-                                <button
-                                    onClick={() => handleAcceptJob(job.id)}
-                                    className="w-full py-4 bg-purple-600 text-white rounded-[20px] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-purple-100 dark:shadow-none animate-pulse"
-                                >
-                                    <CheckCircle2 size={16} /> Accept Direct Request
-                                </button>
-                            ) : jobsSubTab === 'Proposed' ? (
-
-                                <div className="w-full py-4 bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded-[20px] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 border border-slate-100 dark:border-slate-700">
-                                    Pending Shipper <Clock size={16} />
-                                </div>
-                            ) : jobsSubTab === 'Rejected' ? (
-                                <div className="w-full py-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-[20px] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 border border-red-100 dark:border-red-900/30">
-                                    Load Rejected <X size={16} />
-                                </div>
-                            ) : job.type === 'Accepted' ? (
-                                <div className="w-full py-4 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-[20px] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 border border-green-100 dark:border-green-900/30">
-                                    Trip Approved <CheckCircle2 size={16} />
-                                </div>
-                            ) : (
-                                <div className="flex gap-2">
+                                        )}
+                                    </div>
+                                ) : jobsSubTab === 'Requests' ? (
                                     <button
                                         onClick={() => handleAcceptJob(job.id)}
-                                        className="flex-1 py-4 bg-blue-600 text-white rounded-[20px] font-black text-xs uppercase tracking-widest shadow-xl dark:shadow-none hover:scale-[1.02] active:scale-95 transition-all"
+                                        className="w-full py-3.5 bg-purple-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-purple-100 dark:shadow-none animate-pulse"
                                     >
-                                        Accept
+                                        <CheckCircle2 size={14} /> Accept Request
                                     </button>
-                                    <button className="flex-1 py-4 bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-100 dark:border-slate-700 rounded-[20px] font-black text-xs uppercase tracking-widest">Chat</button>
-                                </div>
-                            )}
-                        </div>
-                    ))}
+                                ) : jobsSubTab === 'Listings' ? (
+                                    <div className="w-full py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 border border-blue-100 dark:border-blue-900/30">
+                                        Active Listing <CheckCircle2 size={14} />
+                                    </div>
+                                ) : jobsSubTab === 'Proposed' ? (
+                                    <div className="w-full py-3 bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded-xl font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 border border-slate-100 dark:border-slate-700">
+                                        Pending Shipper <Clock size={14} />
+                                    </div>
+                                ) : jobsSubTab === 'Rejected' ? (
+                                    <div className="w-full py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 border border-red-100 dark:border-red-900/30">
+                                        Rejected <X size={14} />
+                                    </div>
+                                ) : job.type === 'Accepted' ? (
+                                    <div className="w-full py-3 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-xl font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 border border-green-100 dark:border-green-900/30">
+                                        Approved <CheckCircle2 size={14} />
+                                    </div>
+                                ) : (
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => handleAcceptJob(job.id)}
+                                            className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg dark:shadow-none hover:scale-[1.02] active:scale-95 transition-all"
+                                        >
+                                            Accept
+                                        </button>
+                                        <button className="flex-1 py-3 bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-100 dark:border-slate-700 rounded-xl font-black text-[10px] uppercase tracking-widest">Chat</button>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
         </div>

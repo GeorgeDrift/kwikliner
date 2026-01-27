@@ -11,26 +11,25 @@ const getDashboardStats = async (req, res) => {
         `);
         const totalUsers = usersQuery.rows.reduce((acc, curr) => acc + parseInt(curr.count), 0);
 
-        // 2. Revenue (Mock calculation from shipments for now as we don't have a transaction table)
-        // Assuming 10% commission on all 'In Transit' or 'Delivered' shipments
+        // 2. Revenue (Real calculation from transactions table)
+        // Sum of commission_amounts from 'Completed' transactions
         const revenueQuery = await pool.query(`
-            SELECT SUM(price) as total_volume 
-            FROM shipments 
-            WHERE status IN ('In Transit', 'Delivered', 'Completed')
+            SELECT COALESCE(SUM(commission_amount), 0) as total_revenue
+            FROM transactions 
+            WHERE status = 'Completed'
         `);
-        const totalVolume = revenueQuery.rows[0].total_volume || 0;
-        const totalRevenue = totalVolume * 0.10; // 10% commission
+        const totalRevenue = parseFloat(revenueQuery.rows[0].total_revenue);
 
         // 3. active system load (Mocked for now)
-        const systemLoad = 98;
+        const systemLoad = 42; // Static for now
 
         // 4. Pending Alerts (Users pending compliance)
         const alertsQuery = await pool.query(`
             SELECT COUNT(*) as count 
             FROM users 
-            WHERE compliance_status = 'PENDING'
+            WHERE compliance_status = 'PENDING' OR compliance_status = 'SUBMITTED'
         `);
-        const pendingAlerts = alertsQuery.rows[0].count;
+        const pendingAlerts = parseInt(alertsQuery.rows[0].count);
 
         // 5. Recent Signups
         const recentUsersQuery = await pool.query(`
@@ -40,12 +39,12 @@ const getDashboardStats = async (req, res) => {
             LIMIT 5
         `);
 
-        // 6. Recent Shipments (as proxy for transactions)
-        const recentShipmentsQuery = await pool.query(`
-            SELECT s.id, s.created_at, u.name as initiator, s.price, s.status 
-            FROM shipments s
-            JOIN users u ON s.shipper_id = u.id
-            ORDER BY s.created_at DESC 
+        // 6. Recent Transactions (Real data)
+        const recentTxQuery = await pool.query(`
+            SELECT t.id, t.created_at, u.name as initiator, t.gross_amount, t.status, t.type
+            FROM transactions t
+            LEFT JOIN users u ON t.user_id = u.id
+            ORDER BY t.created_at DESC 
             LIMIT 5
         `);
 
@@ -57,13 +56,13 @@ const getDashboardStats = async (req, res) => {
                 pendingAlerts
             },
             recentUsers: recentUsersQuery.rows,
-            recentTransactions: recentShipmentsQuery.rows.map(s => ({
-                id: s.id,
-                date: new Date(s.created_at).toLocaleDateString(),
-                from: s.initiator, // The shipper
-                type: 'SHIPMENT',
-                amount: s.price,
-                status: s.status
+            recentTransactions: recentTxQuery.rows.map(t => ({
+                id: t.id,
+                date: new Date(t.created_at).toLocaleDateString(),
+                from: t.initiator || 'System',
+                type: t.type,
+                amount: Math.abs(parseFloat(t.gross_amount)), // Display positive for UI
+                status: t.status
             }))
         });
 

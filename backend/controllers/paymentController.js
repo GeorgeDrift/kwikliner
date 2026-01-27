@@ -37,11 +37,18 @@ exports.initiatePayment = async (req, res) => {
         const transResult = await pool.query(query, values);
         const transaction = transResult.rows[0];
 
-        // 2. Call PayChangu API
+        // 2. Resolve Operator ID
+        const operators = await payChanguService.getMobileMoneyOperators();
+        const matchedOperator = operators.find(op => op.name?.toUpperCase().includes(providerRefId?.toUpperCase()));
+        // Fallback: If no match found but we have a providerRefId, try to use it directly, otherwise default to first operator.
+        // Better fallback: default to Airtel (most common) or first entry if lookup fails.
+        const operatorId = matchedOperator ? (matchedOperator.ref_id || matchedOperator.id) : (operators[0]?.ref_id || providerRefId);
+
+        // 3. Call PayChangu API
         const paymentResponse = await payChanguService.initiatePayment({
             mobile: mobileNumber,
             amount: amount,
-            mobile_money_operator_ref_id: providerRefId
+            mobile_money_operator_ref_id: operatorId
         });
 
         // 3. Update Transaction with PayChangu details
@@ -60,8 +67,9 @@ exports.initiatePayment = async (req, res) => {
         });
 
     } catch (err) {
-        console.error("Payment Initiation Error:", err);
-        res.status(500).json({ error: err.message });
+        console.error("Payment Initiation Error:", err.response?.data || err.message);
+        const errorMsg = err.response?.data?.message || err.response?.data?.error || err.message;
+        res.status(err.response?.status || 500).json({ error: errorMsg });
     }
 };
 
@@ -81,11 +89,11 @@ exports.verifyPayment = async (req, res) => {
             const transResult = await pool.query('SELECT * FROM transactions WHERE transaction_ref = $1', [chargeId]);
             const transaction = transResult.rows[0];
 
-            if (transaction && transaction.status !== 'completed') {
+            if (transaction && transaction.status !== 'Completed') {
                 await pool.query('BEGIN');
 
                 // Update transaction
-                await pool.query('UPDATE transactions SET status = $1 WHERE id = $2', ['completed', transaction.id]);
+                await pool.query('UPDATE transactions SET status = $1 WHERE id = $2', ['Completed', transaction.id]);
 
                 // Update Shipment (Ride)
                 if (transaction.shipment_id) {
@@ -98,11 +106,23 @@ exports.verifyPayment = async (req, res) => {
                         // Update shipment status and payment info
                         // If it's a 'share' type (we'll check if a column or pattern exists), mark Completed
                         // For KwikLiner, we'll mark deposit as Secured or payment as Paid
-                        const isShare = shipment.cargo === 'Passengers' || (shipment.id && shipment.id.includes('SHARE'));
+                        const isShare =
+                            shipment.cargo === 'Passengers' ||
+                            shipment.cargo === 'Share Ride' ||
+                            (shipment.id && shipment.id.includes('SHARE'));
 
                         let newStatus = shipment.status;
-                        if (isShare) newStatus = 'Completed';
-                        else if (shipment.status === 'Waiting for Driver Commitment') newStatus = 'Ready for Pickup';
+                        if (isShare) {
+                            newStatus = 'Completed';
+                        } else if (shipment.status === 'Waiting for Driver Commitment') {
+                            newStatus = 'Ready for Pickup';
+                        } else if (status === 'success') {
+                            // If it's a regular cargo shipment and payment is successful
+                            // We might keep the current status or move to 'Ready for Pickup' if it was 'Pending Deposit'
+                            if (shipment.status === 'Handshake' || shipment.status === 'Pending Deposit') {
+                                newStatus = 'Ready for Pickup';
+                            }
+                        }
 
                         await pool.query(
                             `UPDATE shipments SET status = $1, deposit_status = $2, payment_timing = $3 WHERE id = $4`,
@@ -190,9 +210,9 @@ exports.handleWebhook = async (req, res) => {
             const transResult = await pool.query('SELECT * FROM transactions WHERE transaction_ref = $1', [refId]);
             const transaction = transResult.rows[0];
 
-            if (transaction && transaction.status !== 'completed') {
+            if (transaction && transaction.status !== 'Completed') {
                 await pool.query('BEGIN');
-                await pool.query('UPDATE transactions SET status = $1 WHERE id = $2', ['completed', transaction.id]);
+                await pool.query('UPDATE transactions SET status = $1 WHERE id = $2', ['Completed', transaction.id]);
 
                 if (transaction.shipment_id) {
                     const shipmentResult = await pool.query('SELECT * FROM shipments WHERE id = $1', [transaction.shipment_id]);
@@ -271,7 +291,7 @@ exports.requestPayout = async (req, res) => {
             last_name: user.name.split(' ')[1] || ''
         });
 
-        await pool.query('UPDATE transactions SET status = $1 WHERE transaction_ref = $2', ['completed', chargeId]);
+        await pool.query('UPDATE transactions SET status = $1 WHERE transaction_ref = $2', ['Completed', chargeId]);
         await pool.query('COMMIT');
 
         res.json({ status: 'success', message: 'Payout processed successfully', data: payoutResponse });

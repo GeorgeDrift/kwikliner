@@ -29,8 +29,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
     // Filter for truly active shipments (those with a driver assigned)
     const trulyActiveShipments = useMemo(() =>
         shipmentsData.Active.filter((s: any) =>
-            (s.driver_id || s.assigned_driver_id) &&
-            ['Waiting for Driver Commitment', 'Pending Deposit', 'Active (Waiting Delivery)', 'In Transit', 'Ready for Pickup', 'Approved / Waiting Pick up'].includes(s.status)
+            ['Waiting for Driver Commitment', 'Pending Deposit', 'Active (Waiting Delivery)', 'In Transit', 'Ready for Pickup', 'Approved / Waiting Pick up', 'Handshake'].includes(s.status)
         ),
         [shipmentsData.Active]);
 

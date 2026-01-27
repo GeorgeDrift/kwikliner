@@ -12,23 +12,9 @@ interface AdminDashboardProps {
     mobileMenuAction?: number;
 }
 
-// Mock Data (Same as before)
-const MOCK_USERS = [
-    { id: '1', name: 'John Shipper', role: 'SHIPPER', status: 'ACTIVE', earnings: 0 },
-    { id: '2', name: 'Musa Driver', role: 'DRIVER', status: 'ACTIVE', earnings: 450000 },
-    { id: '3', name: 'Fleet Dynamics', role: 'LOGISTICS_OWNER', status: 'ACTIVE', earnings: 1250000 },
-    { id: '4', name: 'Bad Actor', role: 'DRIVER', status: 'SUSPENDED', earnings: 12000 },
-    { id: '5', name: 'KwikSpares', role: 'HARDWARE_OWNER', status: 'ACTIVE', earnings: 89000 },
-    { id: '6', name: 'Speedy Construction', role: 'SHIPPER', status: 'ACTIVE', earnings: 0 },
-    { id: '7', name: 'City Logistics', role: 'LOGISTICS_OWNER', status: 'ACTIVE', earnings: 3200000 },
-];
+import { api } from '../../../services/api';
 
-const MOCK_TRANSACTIONS = [
-    { id: 't1', date: '2024-05-20', type: 'COMMISSION', amount: 5000, from: 'Musa Driver', status: 'COMPLETED' },
-    { id: 't2', date: '2024-05-20', type: 'COMMISSION', amount: 12000, from: 'Fleet Dynamics', status: 'COMPLETED' },
-    { id: 't3', date: '2024-05-19', type: 'COMMISSION', amount: 4500, from: 'Musa Driver', status: 'COMPLETED' },
-    { id: 't4', date: '2024-05-18', type: 'COMMISSION', amount: 3000, from: 'John Shipper', status: 'PENDING' },
-];
+// ... (Interface AdminDashboardProps remains)
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     const [activeTab, setActiveTab] = useState('overview');
@@ -52,13 +38,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
 
     const fetchDashboardData = async () => {
         try {
-            const response = await fetch('http://localhost:5000/api/admin/stats');
-            const data = await response.json();
+            const data = await api.getAdminStats();
             setStats(data.overview);
             setRecentTransactions(data.recentTransactions);
-            // Also setting initial users for the "Recent Signups" view if needed, 
-            // but the API returns recentUsers separate from the overview stats
-            // We might want to store recentUsers separately or in stats
         } catch (error) {
             console.error('Error fetching admin stats:', error);
         } finally {
@@ -68,8 +50,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
 
     const fetchUsers = async () => {
         try {
-            const response = await fetch(`http://localhost:5000/api/admin/users?search=${searchTerm}`);
-            const data = await response.json();
+            const data = await api.getAdminUsers(searchTerm);
             setUsers(data);
         } catch (error) {
             console.error('Error fetching users:', error);
@@ -78,13 +59,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
 
     const toggleUserStatus = async (userId: string) => {
         try {
-            const response = await fetch(`http://localhost:5000/api/admin/users/${userId}/status`, {
-                method: 'PUT',
-            });
-            if (response.ok) {
-                // Refresh users list
-                fetchUsers();
-            }
+            await api.toggleUserStatus(userId);
+            fetchUsers();
         } catch (error) {
             console.error('Error toggling user status:', error);
         }

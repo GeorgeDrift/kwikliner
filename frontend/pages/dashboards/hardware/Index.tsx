@@ -14,6 +14,9 @@ import ChatWidget from '../../../components/ChatWidget';
 import MarketTab from '../../../components/MarketTab';
 import VehicleSlider from '../../../components/VehicleSlider';
 import { api } from '../../../services/api';
+import { fileToBase64 } from '../../../services/fileUtils';
+import { BRANDS } from '../../../constants/branding';
+import { io } from 'socket.io-client';
 
 interface HardwareOwnerDashboardProps {
   user: User;
@@ -86,7 +89,6 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
     loadProducts();
 
     // Socket Integration
-    const { io } = require('socket.io-client');
     const newSocket = io('http://localhost:5000');
 
     newSocket.on('connect', () => {
@@ -213,7 +215,24 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
     ]
   };
 
-  const [newItemData, setNewItemData] = useState({ name: '', price: '', stock: '', category: 'Hardware' });
+  const [newItemData, setNewItemData] = useState({ name: '', price: '', stock: '', category: 'Hardware', image: '' });
+
+  const handleHardwareImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, isEditing: boolean = false) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      try {
+        const base64 = await fileToBase64(file);
+        if (isEditing && editingItem) {
+          setEditingItem({ ...editingItem, image: base64 });
+        } else {
+          setNewItemData({ ...newItemData, image: base64 });
+        }
+      } catch (error) {
+        console.error('Image upload failed:', error);
+        alert('Failed to process image.');
+      }
+    }
+  };
 
   const renderContent = () => {
     switch (activeMenu) {
@@ -222,34 +241,27 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 sm:gap-8 animate-in fade-in duration-500">
             <div
               onClick={() => setActiveMenu('Wallet')}
-              className="col-span-12 md:col-span-4 bg-white p-6 sm:p-8 rounded-[32px] border border-slate-50 shadow-sm relative overflow-hidden group cursor-pointer hover:shadow-lg transition-all"
+              className="col-span-12 md:col-span-4 bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-[32px] border border-slate-50 dark:border-slate-800 shadow-sm relative overflow-hidden group cursor-pointer hover:shadow-lg transition-all"
             >
-              <h3 className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-400 mb-4 sm:mb-6">Wallet Balance</h3>
-              <div className="flex items-end space-x-4 mb-6 sm:mb-8">
+              <div className="flex items-end space-x-4 mb-6 sm:mb-8 text-slate-900 dark:text-white">
                 <span className="text-3xl sm:text-4xl font-black tracking-tighter">{wallet?.currency || 'MWK'} {wallet?.balance?.toLocaleString() || '0.00'}</span>
-                <span className="text-emerald-500 text-xs font-black mb-1">Available</span>
+                <span className="text-emerald-500 dark:text-emerald-400 text-xs font-black mb-1">Available</span>
               </div>
-              <div className="flex -space-x-3">
-                {[1, 2, 3, 4].map(i => (
-                  <div key={i} className="h-8 w-8 sm:h-10 sm:w-10 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[10px] font-bold">
-                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${i + 20}`} alt="user" />
-                  </div>
-                ))}
-                <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full border-2 border-white bg-[#6366F1] flex items-center justify-center text-[10px] font-black text-white">
-                  +12
-                </div>
+              <div className="flex items-center text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-2">
+                <CheckCircle2 size={12} className="text-emerald-500 mr-2" />
+                Live Wallet Connected
               </div>
             </div>
 
-            <div className="col-span-12 md:col-span-4 bg-white p-6 sm:p-8 rounded-[32px] border border-slate-50 shadow-sm">
-              <h3 className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-400 mb-4 sm:mb-6">Inventory Health</h3>
-              <div className="flex items-baseline space-x-2 mb-6 sm:mb-8">
+            <div className="col-span-12 md:col-span-4 bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-[32px] border border-slate-50 dark:border-slate-800 shadow-sm">
+              <h3 className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-4 sm:mb-6">Inventory Health</h3>
+              <div className="flex items-baseline space-x-2 mb-6 sm:mb-8 text-slate-900 dark:text-white">
                 <span className="text-3xl sm:text-4xl font-black tracking-tighter">{inventory.reduce((acc, item) => acc + Number(item.stock), 0)}</span>
                 <span className="text-[10px] sm:text-xs font-black text-slate-300">Total Units</span>
               </div>
               <div className="flex space-x-1.5 h-12 sm:h-16 items-end">
                 {[...Array(20)].map((_, i) => (
-                  <div key={i} className={`flex-1 rounded-full ${i < 19 ? 'bg-[#14B8A6]' : 'bg-slate-100'}`} style={{ height: `${Math.random() * 20 + 80}%` }}></div>
+                  <div key={i} className={`flex-1 rounded-full ${i < 19 ? 'bg-[#14B8A6]' : 'bg-slate-100 dark:bg-slate-800'}`} style={{ height: `${Math.random() * 20 + 80}%` }}></div>
                 ))}
               </div>
             </div>
@@ -268,63 +280,57 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
             {/* Top Lists Section */}
             <div className="col-span-12 grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
               {/* Top 5 Products (formerly Sales) */}
-              <div className="bg-white p-6 sm:p-8 rounded-[32px] border border-slate-50 shadow-sm">
+              <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-[32px] border border-slate-50 dark:border-slate-800 shadow-sm">
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-[10px] sm:text-sm font-black uppercase tracking-widest text-slate-400">Top Five Products</h3>
+                  <h3 className="text-[10px] sm:text-sm font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Top Five Products</h3>
                   <div className="bg-emerald-50 p-2 rounded-xl">
                     <Award size={16} className="text-emerald-600" />
                   </div>
                 </div>
                 <div className="space-y-4">
-                  {[
-                    { name: 'Industrial Generator XL', amount: '1,200,000', date: '2 hrs ago' },
-                    { name: 'Solar Panel System (x10)', amount: '850,000', date: '5 hrs ago' },
-                    { name: 'Hydraulic Pump Unit', amount: '450,000', date: '1 day ago' },
-                    { name: 'Construction Tool Set', amount: '120,000', date: '2 days ago' },
-                    { name: 'Safety Equipment Bundle', amount: '85,000', date: '2 days ago' }
-                  ].map((sale, i) => (
-                    <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl group hover:bg-indigo-50 transition-colors">
+                  {inventory.length > 0 ? inventory.slice(0, 5).map((item, i) => (
+                    <div key={item.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl group hover:bg-indigo-50 dark:hover:bg-indigo-900 transition-colors">
                       <div className="flex items-center gap-4">
                         <span className="text-xs font-black text-slate-300 w-4">0{i + 1}</span>
                         <div>
-                          <p className="text-sm font-bold text-slate-900">{sale.name}</p>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{sale.date}</p>
+                          <p className="text-sm font-bold text-slate-900 dark:text-white line-clamp-1">{item.name}</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{item.category || 'General'}</p>
                         </div>
                       </div>
-                      <span className="text-sm font-black text-indigo-600">MWK {sale.amount}</span>
+                      <span className="text-sm font-black text-indigo-600">MWK {Number(item.price).toLocaleString()}</span>
                     </div>
-                  ))}
+                  )) : (
+                    <div className="text-center py-8 text-slate-400 text-xs font-bold uppercase tracking-widest">No products listed yet</div>
+                  )}
                 </div>
               </div>
 
               {/* Top 5 Sales (formerly Products) */}
               {/* Top 5 Sales (formerly Products) */}
-              <div className="bg-white p-6 sm:p-8 rounded-[32px] border border-slate-50 shadow-sm">
+              <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-[32px] border border-slate-50 dark:border-slate-800 shadow-sm">
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-[10px] sm:text-sm font-black uppercase tracking-widest text-slate-400">Top Five Sales</h3>
+                  <h3 className="text-[10px] sm:text-sm font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Top Five Sales</h3>
                   <div className="bg-indigo-50 p-2 rounded-xl">
                     <TrendingUp size={16} className="text-indigo-600" />
                   </div>
                 </div>
                 <div className="space-y-4">
-                  {[
-                    { name: 'Heavy Duty Drill', sales: '145 sold', trend: '+12%' },
-                    { name: 'Safety Vest Pro', sales: '120 sold', trend: '+8%' },
-                    { name: 'Concrete Mixer', sales: '82 sold', trend: '+24%' },
-                    { name: 'Steel Toolbox', sales: '65 sold', trend: '-5%' },
-                    { name: 'Extension Cord 50m', sales: '48 sold', trend: '+1%' }
-                  ].map((prod, i) => (
-                    <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl group hover:bg-emerald-50 transition-colors">
+                  {transactions.filter(t => t.type === 'Sale').length > 0 ? transactions.filter(t => t.type === 'Sale').slice(0, 5).map((sale, i) => (
+                    <div key={sale.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl group hover:bg-emerald-50 dark:hover:bg-emerald-900 transition-colors">
                       <div className="flex items-center gap-4">
                         <span className="text-xs font-black text-slate-300 w-4">0{i + 1}</span>
                         <div>
-                          <p className="text-sm font-bold text-slate-900">{prod.name}</p>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{prod.sales}</p>
+                          <p className="text-sm font-bold text-slate-900 dark:text-white">Sale #{sale.id.substring(0, 6)}</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{new Date(sale.created_at).toLocaleDateString()}</p>
                         </div>
                       </div>
-                      <span className={`text-xs font-black px-2 py-1 rounded-lg ${prod.trend.startsWith('+') ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'}`}>{prod.trend}</span>
+                      <span className="text-xs font-black px-2 py-1 rounded-lg bg-green-100 text-green-600">
+                        {wallet?.currency || 'MWK'} {Number(sale.net_amount).toLocaleString()}
+                      </span>
                     </div>
-                  ))}
+                  )) : (
+                    <div className="text-center py-8 text-slate-400 text-xs font-bold uppercase tracking-widest">No recent sales</div>
+                  )}
                 </div>
               </div>
             </div>
@@ -349,7 +355,7 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {inventory.map((item) => (
-                <div key={item.id} className="bg-white rounded-[32px] p-4 border border-slate-50 shadow-sm hover:shadow-2xl transition-all group relative">
+                <div key={item.id} className="bg-white dark:bg-slate-900 p-4 rounded-[32px] border border-slate-50 dark:border-slate-800 shadow-sm hover:shadow-2xl transition-all group relative">
                   <div className="h-48 rounded-[24px] overflow-hidden mb-4 relative bg-slate-100">
                     <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                     <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-3 py-1 rounded-lg text-[11px] font-black text-indigo-600 uppercase tracking-widest">
@@ -358,9 +364,9 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
                   </div>
                   <div className="px-2 pb-2">
                     <div className="flex justify-between items-start mb-1">
-                      <h4 className="font-black text-slate-900 text-sm line-clamp-1">{item.name}</h4>
+                      <h4 className="font-black text-slate-900 dark:text-white text-sm line-clamp-1">{item.name}</h4>
                     </div>
-                    <p className="text-lg font-black text-indigo-600 mb-4">MWK {Number(item.price).toLocaleString()}</p>
+                    <p className="text-lg font-black text-indigo-600 dark:text-indigo-400 mb-4">MWK {Number(item.price).toLocaleString()}</p>
 
                     <div className="flex items-center justify-between border-t border-slate-50 pt-4">
                       <div className="flex items-center gap-2 text-slate-500 text-xs font-bold">
@@ -414,9 +420,17 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
 
       case 'Analytics':
         // Graph data showing growth from past performances - starts low, grows progressively
-        const hGraphData = [15, 18, 25, 32, 38, 45, 52, 61, 68, 75, 83, 92];
-        const hPoints = hGraphData.map((val, i) => ({
-          x: (i / (hGraphData.length - 1)) * 100,
+        // Dynamic graph data derived from transactions
+        const hGraphData = transactions.length > 0
+          ? transactions.slice(0, 12).map(t => Number(t.net_amount) / 1000)
+          : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+        // Normalize for graph (0-100)
+        const maxVal = Math.max(...hGraphData, 1);
+        const normData = hGraphData.map(v => (v / maxVal) * 100);
+
+        const hPoints = normData.map((val, i) => ({
+          x: (i / (normData.length - 1)) * 100,
           y: 100 - val
         }));
         const hPathData = `M ${hPoints.map(p => `${p.x} ${p.y}`).join(' L ')}`;
@@ -426,7 +440,7 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
           <div className="space-y-8 animate-in fade-in slide-in-from-right-8 duration-700 pb-10">
             <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
               <div>
-                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tighter">Store Analytics</h3>
+                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tighter">Store Analytics</h3>
                 <p className="text-slate-500 font-medium mt-1 text-xs sm:text-sm">Sales trends, stock efficiency, and insights.</p>
               </div>
               <div className="bg-white/50 backdrop-blur-md p-1 rounded-xl border border-white shadow-lg flex flex-wrap gap-1">
@@ -439,31 +453,35 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              <div className="bg-white p-4 rounded-[24px] border border-slate-100 shadow-sm transition-all hover:border-indigo-200 group flex flex-col justify-center">
+              <div className="bg-white dark:bg-slate-900 p-4 rounded-[24px] border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:border-indigo-200 group flex flex-col justify-center">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="h-8 w-8 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
                     <DollarSign size={16} />
                   </div>
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Gross Sales</p>
                 </div>
-                <h4 className="text-2xl font-black text-slate-900 tracking-tight">MWK 8.4M</h4>
+                <h4 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                  {wallet?.currency || 'MWK'} {(transactions.filter(t => t.type === 'Sale' || t.type.includes('Earned')).reduce((sum, t) => sum + Number(t.net_amount), 0)).toLocaleString()}
+                </h4>
                 <div className="flex items-center gap-2 text-[10px] font-bold text-indigo-600">
                   <TrendingUp size={12} />
-                  <span>+15.2% grow</span>
+                  <span>Real-time Data</span>
                 </div>
               </div>
 
-              <div className="bg-white p-4 rounded-[24px] border border-slate-100 shadow-sm transition-all hover:border-blue-200 group flex flex-col justify-center">
+              <div className="bg-white dark:bg-slate-900 p-4 rounded-[24px] border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:border-blue-200 group flex flex-col justify-center">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="h-8 w-8 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
                     <Box size={16} />
                   </div>
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Orders Fulfilled</p>
                 </div>
-                <h4 className="text-2xl font-black text-slate-900 tracking-tight">1,240</h4>
+                <h4 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                  {transactions.filter(t => t.type === 'Sale').length}
+                </h4>
                 <div className="flex items-center gap-2 text-[10px] font-bold text-blue-600">
                   <CheckCircle2 size={12} />
-                  <span>98% Accuracy</span>
+                  <span>Completed Orders</span>
                 </div>
               </div>
 
@@ -476,9 +494,9 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
                     </div>
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Merchant Rating</p>
                   </div>
-                  <h4 className="text-2xl font-black tracking-tight">4.9/5</h4>
+                  <h4 className="text-2xl font-black tracking-tight">{(user as any).rating || '5.0'}/5</h4>
                   <div className="flex items-center gap-2 text-[10px] font-bold text-amber-400">
-                    <span>Top Vendor</span>
+                    <span>Active Seller</span>
                   </div>
                 </div>
               </div>
@@ -581,7 +599,7 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
                       </div>
                       <h5 className="text-sm font-black">Performance</h5>
                     </div>
-                    <p className="text-indigo-100 text-[10px] font-medium leading-tight">Earnings up <span className="text-white font-black">15%</span> this month.</p>
+                    <p className="text-indigo-100 text-[10px] font-medium leading-tight">Track your <span className="text-white font-black">monthly growth</span> and performance.</p>
                   </div>
                   <TrendingUp className="absolute bottom-[-10px] right-[-10px] h-20 w-20 text-white/5 -rotate-12" />
                 </div>
@@ -594,7 +612,7 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
                       </div>
                       <h5 className="text-sm font-black">Inventory Tip</h5>
                     </div>
-                    <p className="text-slate-400 text-[10px] font-medium leading-tight">FH16 spares are high demand. <span className="text-white font-black underline">Restock</span> now.</p>
+                    <p className="text-slate-400 text-[10px] font-medium leading-tight">Review low stock items and <span className="text-white font-black underline">Restock</span> efficiently.</p>
                   </div>
                   <Box className="absolute bottom-[-10px] right-[-10px] h-20 w-20 text-white/5" />
                 </div>
@@ -632,7 +650,7 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
                   <div className="pt-6 border-t border-white/10 flex items-center justify-between">
                     <div>
                       <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Sales</p>
-                      <p className="text-sm font-black">MWK 4.2M</p>
+                      <p className="text-sm font-black">{wallet?.currency || 'MWK'} {(transactions.filter(t => t.type === 'Sale' || t.type.includes('Earned')).reduce((sum, t) => sum + Number(t.net_amount), 0)).toLocaleString()}</p>
                     </div>
                     <div className="h-10 w-10 bg-white/10 rounded-xl flex items-center justify-center">
                       <TrendingUp size={18} className="text-emerald-400" />
@@ -657,14 +675,14 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
                 </div>
               </div>
 
-              <div className="lg:col-span-8 bg-white rounded-[48px] border border-slate-100 shadow-sm overflow-hidden flex flex-col">
-                <div className="p-8 sm:p-10 border-b border-slate-50">
-                  <h4 className="text-xl font-black text-slate-900 tracking-tight">Transaction History</h4>
+              <div className="lg:col-span-8 bg-white dark:bg-slate-900 rounded-[48px] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col">
+                <div className="p-8 sm:p-10 border-b border-slate-50 dark:border-slate-800">
+                  <h4 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Transaction History</h4>
                 </div>
                 <div className="flex-grow overflow-y-auto max-h-[600px] scrollbar-hide">
                   {transactions.length > 0 ? (
                     transactions.map((tx: any) => (
-                      <div key={tx.id} className="p-8 border-b border-slate-50 flex items-center justify-between hover:bg-slate-50/50 transition-all cursor-pointer group">
+                      <div key={tx.id} className="p-8 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-all cursor-pointer group">
                         <div className="flex items-center gap-6">
                           <div className={`h-14 w-14 rounded-2xl flex items-center justify-center shadow-sm border ${tx.type === 'Sale' || tx.type.includes('Earned') ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                             tx.type === 'Withdrawal' ? 'bg-amber-50 text-amber-600 border-amber-100' :
@@ -713,15 +731,15 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
         return (
           <div className="max-w-4xl mx-auto space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
             <div className="text-left">
-              <h3 className="text-3xl font-black text-slate-900 tracking-tighter">Store Settings</h3>
+              <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">Store Settings</h3>
               <p className="text-slate-500 font-medium mt-1">Configure your store preferences and security.</p>
             </div>
 
-            <div className="bg-white p-8 sm:p-12 rounded-[40px] sm:rounded-[48px] border border-slate-100 shadow-2xl space-y-12">
+            <div className="bg-white dark:bg-slate-900 p-8 sm:p-12 rounded-[40px] sm:rounded-[48px] border border-slate-100 dark:border-slate-800 shadow-2xl space-y-12">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-6">
                   <h4 className="text-[11px] font-black text-slate-300 uppercase tracking-[0.3em] border-b border-slate-50 pb-4">Notifications</h4>
-                  <div className="flex items-center justify-between p-6 bg-slate-50 rounded-3xl">
+                  <div className="flex items-center justify-between p-6 bg-slate-50 dark:bg-slate-800 rounded-3xl">
                     <div>
                       <p className="font-black text-slate-900 text-sm">Order Alerts</p>
                       <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-1">Instant purchase notifications</p>
@@ -730,7 +748,7 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
                       <div className="h-4 w-4 bg-white rounded-full ml-auto shadow-sm"></div>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between p-6 bg-slate-50 rounded-3xl">
+                  <div className="flex items-center justify-between p-6 bg-slate-50 dark:bg-slate-800 rounded-3xl">
                     <div>
                       <p className="font-black text-slate-900 text-sm">Low Stock Warnings</p>
                       <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-1">Alert when inventory is low</p>
@@ -743,14 +761,14 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
 
                 <div className="space-y-6">
                   <h4 className="text-[11px] font-black text-slate-300 uppercase tracking-[0.3em] border-b border-slate-50 pb-4">Security</h4>
-                  <button className="w-full flex items-center justify-between p-6 bg-slate-50 rounded-3xl hover:bg-slate-100 transition-all">
+                  <button className="w-full flex items-center justify-between p-6 bg-slate-50 dark:bg-slate-800 rounded-3xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-all">
                     <div className="text-left">
                       <p className="font-black text-slate-900 text-sm">Change Password</p>
                       <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-1">Last changed 3mo ago</p>
                     </div>
                     <ChevronRight size={18} className="text-slate-300" />
                   </button>
-                  <button className="w-full flex items-center justify-between p-6 bg-slate-50 rounded-3xl hover:bg-slate-100 transition-all text-red-600">
+                  <button className="w-full flex items-center justify-between p-6 bg-slate-50 dark:bg-slate-800 rounded-3xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-all text-red-600">
                     <div className="text-left">
                       <p className="font-black text-sm">Close Store</p>
                       <p className="text-[11px] font-bold text-red-300 uppercase tracking-wider mt-1">Temporarily disable listings</p>
@@ -778,15 +796,15 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
   };
 
   return (
-    <div className="flex flex-col md:flex-row bg-[#F8F9FB] min-h-screen text-slate-900 overflow-hidden font-['Inter'] relative">
+    <div className="flex flex-col md:flex-row bg-[#F8F9FB] dark:bg-slate-950 min-h-screen text-slate-900 dark:text-slate-100 overflow-hidden font-['Inter'] relative transition-colors duration-300">
 
 
 
       {/* SIDEBAR NAVIGATION (Desktop) */}
-      <aside className="hidden md:flex w-64 bg-white border-r border-slate-100 flex-col p-6 shrink-0 h-screen sticky top-0">
-        <div className="flex items-center justify-center mb-10 px-2">
-          <div className="bg-[#6366F1] p-2 rounded-xl shadow-lg shadow-indigo-100">
-            <Store className="text-white" size={24} />
+      <aside className="hidden md:flex w-64 bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800 flex-col p-6 shrink-0 h-[calc(100vh-64px)] sticky top-16 transition-colors duration-300">
+        <div className="flex items-center justify-center mb-10 px-2 group/logo shrink-0">
+          <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center h-16 w-full max-w-[200px]">
+            <img src={BRANDS.LOGO_KWIKLINER_WIDE} alt="KwikLiner" className="max-h-full max-w-full object-contain" />
           </div>
         </div>
         <div className="flex-grow space-y-8 overflow-y-auto pr-2 scrollbar-hide">
@@ -799,8 +817,8 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
                     key={item.id}
                     onClick={() => item.id === 'Logout' ? onLogout() : setActiveMenu(item.id)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all group ${activeMenu === item.id
-                      ? 'bg-[#6366F1]/5 text-[#6366F1]'
-                      : 'text-slate-500 hover:bg-slate-50'
+                      ? 'bg-[#6366F1]/5 dark:bg-[#6366F1]/10 text-[#6366F1] dark:text-indigo-400'
+                      : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
                       }`}
                   >
                     <div className="flex items-center space-x-3">
@@ -822,15 +840,12 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-[200] md:hidden">
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsMobileMenuOpen(false)}></div>
-          <aside className="absolute left-0 top-0 bottom-0 w-80 bg-white flex flex-col p-8 animate-in slide-in-from-left duration-300 shadow-2xl">
+          <aside className="absolute left-0 top-0 bottom-0 w-80 bg-white dark:bg-slate-900 flex flex-col p-8 animate-in slide-in-from-left duration-300 shadow-2xl">
             <div className="flex items-center justify-between mb-10 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="bg-[#6366F1] p-2.5 rounded-xl">
-                  <Globe className="text-white" size={24} />
-                </div>
-                <span className="font-black text-xl tracking-tighter">KwikLiner</span>
+              <div className="bg-white p-2 sm:p-3 rounded-2xl shadow-sm border border-slate-100 flex items-center h-12">
+                <img src={BRANDS.LOGO_KWIKLINER_WIDE} alt="KwikLiner" className="h-7 w-auto object-contain" />
               </div>
-              <button onClick={() => setIsMobileMenuOpen(false)} className="h-10 w-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400">
+              <button onClick={() => setIsMobileMenuOpen(false)} className="h-10 w-10 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-400 dark:text-slate-500">
                 <X size={20} />
               </button>
             </div>
@@ -863,11 +878,11 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
               ))}
             </div>
 
-            <div className="pt-8 border-t border-slate-50 mt-8 shrink-0">
-              <div className="bg-slate-50 p-6 rounded-[32px] flex items-center gap-4 border border-slate-100 overflow-hidden">
-                <div className="h-12 w-12 rounded-full bg-white shadow-sm overflow-hidden shrink-0"><img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`} alt="pfp" /></div>
+            <div className="pt-8 border-t border-slate-50 dark:border-slate-800 mt-8 shrink-0">
+              <div className="bg-slate-50 dark:bg-slate-800 p-6 rounded-[32px] flex items-center gap-4 border border-slate-100 dark:border-slate-700 overflow-hidden">
+                <div className="h-12 w-12 rounded-full bg-white dark:bg-slate-900 shadow-sm overflow-hidden shrink-0"><img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`} alt="pfp" /></div>
                 <div className="min-w-0">
-                  <p className="text-xs font-black text-slate-900 truncate">{user.name}</p>
+                  <p className="text-xs font-black text-slate-900 dark:text-white truncate">{user.name}</p>
                   <p className="text-[11px] font-bold text-indigo-400 uppercase tracking-widest mt-0.5">Merchant</p>
                 </div>
               </div>
@@ -883,34 +898,41 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
         {isAddProductOpen && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsAddProductOpen(false)}></div>
-            <div className="bg-white rounded-[32px] sm:rounded-[40px] p-6 sm:p-10 w-full max-w-lg relative z-10 animate-in zoom-in-95 duration-300 shadow-2xl">
+            <div className="bg-white dark:bg-slate-900 rounded-[32px] sm:rounded-[40px] p-6 sm:p-10 w-full max-w-lg relative z-10 animate-in zoom-in-95 duration-300 shadow-2xl">
               <div className="flex justify-between items-center mb-6 sm:mb-8">
-                <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Add New Product</h3>
+                <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">Add New Product</h3>
                 <button onClick={() => setIsAddProductOpen(false)} className="h-10 w-10 sm:h-12 sm:w-12 bg-slate-50 rounded-full flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-colors">
                   <X size={20} className="sm:size-[24px]" />
                 </button>
               </div>
               <div className="space-y-4 sm:space-y-6">
-                <div className="h-32 sm:h-40 w-full rounded-[24px] sm:rounded-[32px] border-4 border-dashed border-slate-100 flex flex-col items-center justify-center text-slate-400 hover:border-[#6366F1] hover:text-[#6366F1] hover:bg-indigo-50/10 transition-all cursor-pointer">
-                  <ImageIcon size={28} className="sm:size-[32px]" />
-                  <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest mt-2">Upload Image</span>
-                </div>
+                <label className="h-32 sm:h-40 w-full rounded-[24px] sm:rounded-[32px] border-4 border-dashed border-slate-100 flex flex-col items-center justify-center text-slate-400 hover:border-[#6366F1] hover:text-[#6366F1] hover:bg-indigo-50/10 transition-all cursor-pointer relative overflow-hidden group">
+                  {newItemData.image ? (
+                    <img src={newItemData.image} className="w-full h-full object-cover absolute inset-0" alt="Preview" />
+                  ) : (
+                    <>
+                      <ImageIcon size={28} className="sm:size-[32px]" />
+                      <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest mt-2">Upload Image</span>
+                    </>
+                  )}
+                  <input type="file" className="hidden" accept="image/*" onChange={(e) => handleHardwareImageUpload(e, false)} />
+                </label>
                 <div className="space-y-2 sm:space-y-3">
                   <label className="text-[10px] sm:text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Product Name</label>
-                  <input className="w-full p-3 sm:p-4 bg-slate-50 rounded-xl sm:rounded-2xl font-bold outline-none border-2 border-transparent focus:border-[#6366F1]" placeholder="e.g. Solar Generator"
+                  <input className="w-full p-3 sm:p-4 bg-slate-50 dark:bg-slate-800 rounded-xl sm:rounded-2xl font-bold outline-none border-2 border-transparent focus:border-[#6366F1] dark:text-white" placeholder="e.g. Solar Generator"
                     value={newItemData.name} onChange={e => setNewItemData({ ...newItemData, name: e.target.value })}
                   />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2 sm:space-y-3">
                     <label className="text-[10px] sm:text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Price (MWK)</label>
-                    <input className="w-full p-3 sm:p-4 bg-slate-50 rounded-xl sm:rounded-2xl font-bold outline-none border-2 border-transparent focus:border-[#6366F1]" placeholder="0.00"
+                    <input className="w-full p-3 sm:p-4 bg-slate-50 dark:bg-slate-800 rounded-xl sm:rounded-2xl font-bold outline-none border-2 border-transparent focus:border-[#6366F1] dark:text-white" placeholder="0.00"
                       value={newItemData.price} onChange={e => setNewItemData({ ...newItemData, price: e.target.value })}
                     />
                   </div>
                   <div className="space-y-2 sm:space-y-3">
                     <label className="text-[10px] sm:text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Stock Qty</label>
-                    <input className="w-full p-3 sm:p-4 bg-slate-50 rounded-xl sm:rounded-2xl font-bold outline-none border-2 border-transparent focus:border-[#6366F1]" placeholder="0"
+                    <input className="w-full p-3 sm:p-4 bg-slate-50 dark:bg-slate-800 rounded-xl sm:rounded-2xl font-bold outline-none border-2 border-transparent focus:border-[#6366F1] dark:text-white" placeholder="0"
                       value={newItemData.stock} onChange={e => setNewItemData({ ...newItemData, stock: e.target.value })}
                     />
                   </div>
@@ -921,7 +943,7 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
                     price: newItemData.price,
                     stock: newItemData.stock,
                     category: newItemData.category,
-                    image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&w=400',
+                    image: newItemData.image || 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&w=400',
                   })}
                   className="w-full py-4 sm:py-5 bg-[#6366F1] text-white rounded-xl sm:rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-indigo-100 mt-4 text-xs sm:text-sm"
                 >
@@ -936,26 +958,27 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
         {editingItem && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setEditingItem(null)}></div>
-            <div className="bg-white rounded-[32px] sm:rounded-[40px] p-6 sm:p-10 w-full max-w-lg relative z-10 animate-in zoom-in-95 duration-300 shadow-2xl">
+            <div className="bg-white dark:bg-slate-900 rounded-[32px] sm:rounded-[40px] p-6 sm:p-10 w-full max-w-lg relative z-10 animate-in zoom-in-95 duration-300 shadow-2xl">
               <div className="flex justify-between items-center mb-6 sm:mb-8">
-                <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Edit Product</h3>
+                <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">Edit Product</h3>
                 <button onClick={() => setEditingItem(null)} className="h-10 w-10 sm:h-12 sm:w-12 bg-slate-50 rounded-full flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-colors">
                   <X size={20} className="sm:size-[24px]" />
                 </button>
               </div>
               <form onSubmit={saveEditedItem} className="space-y-4 sm:space-y-6">
-                <div className="h-32 sm:h-40 w-full rounded-[24px] sm:rounded-[32px] overflow-hidden relative">
+                <label className="h-32 sm:h-40 w-full rounded-[24px] sm:rounded-[32px] overflow-hidden relative cursor-pointer group">
                   <img src={editingItem.image} className="w-full h-full object-cover" alt="Product" />
-                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <span className="bg-white/90 px-4 py-2 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest">Change Image</span>
                   </div>
-                </div>
+                  <input type="file" className="hidden" accept="image/*" onChange={(e) => handleHardwareImageUpload(e, true)} />
+                </label>
                 <div className="space-y-2 sm:space-y-3">
                   <label className="text-[10px] sm:text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Product Name</label>
                   <input
                     value={editingItem.name}
                     onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
-                    className="w-full p-3 sm:p-4 bg-slate-50 rounded-xl sm:rounded-2xl font-bold outline-none border-2 border-transparent focus:border-[#6366F1]"
+                    className="w-full p-3 sm:p-4 bg-slate-50 dark:bg-slate-800 rounded-xl sm:rounded-2xl font-bold outline-none border-2 border-transparent focus:border-[#6366F1] dark:text-white"
                   />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -964,7 +987,7 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
                     <input
                       value={editingItem.price}
                       onChange={(e) => setEditingItem({ ...editingItem, price: e.target.value })}
-                      className="w-full p-3 sm:p-4 bg-slate-50 rounded-xl sm:rounded-2xl font-bold outline-none border-2 border-transparent focus:border-[#6366F1]"
+                      className="w-full p-3 sm:p-4 bg-slate-50 dark:bg-slate-800 rounded-xl sm:rounded-2xl font-bold outline-none border-2 border-transparent focus:border-[#6366F1] dark:text-white"
                     />
                   </div>
                   <div className="space-y-2 sm:space-y-3">
@@ -972,7 +995,7 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
                     <input
                       value={editingItem.stock}
                       onChange={(e) => setEditingItem({ ...editingItem, stock: e.target.value })}
-                      className="w-full p-3 sm:p-4 bg-slate-50 rounded-xl sm:rounded-2xl font-bold outline-none border-2 border-transparent focus:border-[#6366F1]"
+                      className="w-full p-3 sm:p-4 bg-slate-50 dark:bg-slate-800 rounded-xl sm:rounded-2xl font-bold outline-none border-2 border-transparent focus:border-[#6366F1] dark:text-white"
                     />
                   </div>
                 </div>
@@ -988,9 +1011,9 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
         {isCartOpen && (
           <div className="fixed inset-0 z-[200] flex justify-end">
             <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => { setIsCartOpen(false); setIsCheckingOut(false); setCheckoutStep('review'); }}></div>
-            <div className="w-full max-w-md bg-white h-screen shadow-2xl relative z-10 flex flex-col animate-in slide-in-from-right duration-500 overflow-hidden">
-              <div className="p-8 border-b border-slate-100 flex justify-between items-center shrink-0">
-                <h2 className="text-2xl font-black text-slate-900 tracking-tighter flex items-center gap-3">
+            <div className="w-full max-w-md bg-white dark:bg-slate-900 h-screen shadow-2xl relative z-10 flex flex-col animate-in slide-in-from-right duration-500 overflow-hidden">
+              <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0">
+                <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter flex items-center gap-3">
                   <ShoppingCart className="text-blue-600" /> {isCheckingOut ? 'Checkout' : 'Your KwikCart'}
                 </h2>
                 <button onClick={() => { setIsCartOpen(false); setIsCheckingOut(false); setCheckoutStep('review'); }} className="h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 hover:text-blue-600 transition-all">
@@ -1009,12 +1032,12 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
                     ) : (
                       cart.map(item => (
                         <div key={item.id} className="flex gap-4 group">
-                          <div className="h-24 w-24 rounded-2xl bg-slate-50 overflow-hidden shrink-0">
+                          <div className="h-24 w-24 rounded-2xl bg-slate-50 dark:bg-slate-800 overflow-hidden shrink-0">
                             <img src={item.image} className="w-full h-full object-cover" alt={item.name} />
                           </div>
                           <div className="flex-grow">
                             <div className="flex justify-between items-start">
-                              <h4 className="font-black text-slate-900 text-sm">{item.name}</h4>
+                              <h4 className="font-black text-slate-900 dark:text-white text-sm">{item.name}</h4>
                               <button onClick={() => removeCartItem(item.id)} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
                             </div>
                             <p className="text-blue-600 font-black text-sm mt-1">MWK {Number(item.price).toLocaleString()}</p>
@@ -1030,10 +1053,10 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
                     )}
                   </div>
                   {cart.length > 0 && (
-                    <div className="p-8 bg-slate-50 border-t border-slate-100 space-y-4">
+                    <div className="p-8 bg-slate-50 dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 space-y-4">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm font-bold text-slate-500">Subtotal</span>
-                        <span className="text-lg font-black text-slate-900">MWK {cartTotal.toLocaleString()}</span>
+                        <span className="text-sm font-bold text-slate-500 dark:text-slate-400">Subtotal</span>
+                        <span className="text-lg font-black text-slate-900 dark:text-white">MWK {cartTotal.toLocaleString()}</span>
                       </div>
                       <button onClick={() => setIsCheckingOut(true)} className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-blue-100 hover:scale-[1.02] active:scale-95 transition-all">
                         Proceed to Payment
@@ -1075,12 +1098,12 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
                       <div className="space-y-8 animate-in fade-in slide-in-from-right-4">
                         <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-6">Payment Method</h3>
                         <div className="space-y-4">
-                          <button onClick={handleCheckout} className="w-full flex items-center justify-between p-6 bg-white border-2 border-blue-600 rounded-[32px] shadow-xl group hover:-translate-y-1 transition-all">
+                          <button onClick={handleCheckout} className="w-full flex items-center justify-between p-6 bg-white dark:bg-slate-800 border-2 border-blue-600 rounded-[32px] shadow-xl group hover:-translate-y-1 transition-all">
                             <div className="flex items-center gap-4">
-                              <div className="h-12 w-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600"><CreditCard size={24} /></div>
+                              <div className="h-12 w-12 bg-blue-50 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center text-blue-600 dark:text-blue-400"><CreditCard size={24} /></div>
                               <div className="text-left">
-                                <p className="font-black text-slate-900 text-sm leading-none">KwikWallet Balance</p>
-                                <p className="text-[11px] font-bold text-blue-400 mt-1">Available: MWK 1.2M</p>
+                                <p className="font-black text-slate-900 dark:text-white text-sm leading-none">KwikWallet Balance</p>
+                                <p className="text-[11px] font-bold text-blue-400 mt-1">Available: {wallet?.currency || 'MWK'} {wallet?.balance?.toLocaleString() || '0.00'}</p>
                               </div>
                             </div>
                             <ChevronRight size={20} className="text-blue-600" />

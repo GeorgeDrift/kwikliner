@@ -5,7 +5,9 @@ import { ToastProvider } from './components/ToastContext';
 import { ThemeProvider } from './components/ThemeContext';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
-import RegistrationFlow from './pages/RegistrationFlow';
+import Marketplace from './pages/Marketplace';
+import Login from './pages/Login';
+import Register from './pages/Register';
 import Settings from './pages/Settings';
 import ShipperDashboard from './pages/dashboards/shipper/Index';
 import DriverDashboard from './pages/dashboards/driver/Index';
@@ -16,46 +18,36 @@ import VerifyEmail from './pages/VerifyEmail';
 import { User, UserRole } from './types';
 
 const App: React.FC = () => {
+  // ... (persistence logic remains same) ...
   const [user, setUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('kwikliner_user');
     return saved ? JSON.parse(saved) : null;
   });
 
-  // Persistence: Validate token and fetch fresh user data on load
   useEffect(() => {
     const validateSession = async () => {
       const token = localStorage.getItem('token');
       const savedUser = localStorage.getItem('kwikliner_user');
-
       if (!token) {
-        // Clear any stale user data if no token
         if (savedUser) localStorage.removeItem('kwikliner_user');
         setUser(null);
         return;
       }
-
       try {
         const response = await fetch('http://localhost:5000/api/auth/profile', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          headers: { 'Authorization': `Bearer ${token}` }
         });
-
         if (response.ok) {
           const freshUserData = await response.json();
           setUser(freshUserData);
           localStorage.setItem('kwikliner_user', JSON.stringify(freshUserData));
         } else {
-          console.error('Session invalid, logging out');
           handleLogout();
         }
       } catch (error) {
-        console.error('Error validating session:', error);
-        // On network error, clear user to be safe and force re-login
         handleLogout();
       }
     };
-
     validateSession();
   }, []);
 
@@ -68,7 +60,6 @@ const App: React.FC = () => {
     setUser(null);
     localStorage.removeItem('kwikliner_user');
     localStorage.removeItem('token');
-    // Navigate to home will be handled by useEffect watching user state
   };
 
   const [mobileMenuAction, setMobileMenuAction] = useState(0);
@@ -81,14 +72,15 @@ const App: React.FC = () => {
             <Navbar user={user} onLogout={handleLogout} onMenuToggle={() => setMobileMenuAction(prev => prev + 1)} />
             <main className="flex-grow">
               <Routes>
-                <Route path="/" element={<Home user={user} onLogin={handleUpdateUser} />} />
+                <Route path="/" element={<Marketplace user={user} />} />
+                <Route path="/marketplace" element={<Marketplace user={user} />} />
                 <Route
                   path="/register"
-                  element={<RegistrationFlow onRegister={handleUpdateUser} />}
+                  element={<Register onRegister={handleUpdateUser} />}
                 />
                 <Route
                   path="/login"
-                  element={<RegistrationFlow onRegister={handleUpdateUser} defaultMode="login" />}
+                  element={<Login onRegister={handleUpdateUser} onRegisterClick={() => { }} />}
                 />
                 <Route path="/verify-email" element={<VerifyEmail onVerify={handleUpdateUser} />} />
                 <Route

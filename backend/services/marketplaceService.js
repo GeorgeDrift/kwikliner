@@ -34,7 +34,7 @@ const marketplaceService = {
             id, 'Cargo', cargo, `Shipment route: ${route}`,
             price, price > 0 ? `MWK ${Number(price).toLocaleString()}` : 'Open to Bids',
             route, images, shipper_id, 'Verified Shipper',
-            status === 'Bidding Open' || status === 'Finding Driver' ? 'Active' : 'Handshake',
+            ['Bidding Open', 'Finding Driver'].includes(status) ? 'Active' : 'Closed',
             JSON.stringify({ weight, quantity })
         ]);
     },
@@ -44,7 +44,10 @@ const marketplaceService = {
     },
 
     syncVehicle: async (vehicle) => {
-        const { id, driver_id, driver_name, vehicle_type, capacity, route, price, images, location } = vehicle;
+        const { id, driver_id, driver_name, vehicle_type, capacity, route, price, images, location, manufacturer, model, operating_range } = vehicle;
+        const title = manufacturer && model ? `${manufacturer} ${model}` : vehicle_type;
+        const description = `Capacity: ${capacity} | Range: ${operating_range || 'Standard'} | Hub: ${location || route}`;
+
         await pool.query(`
             INSERT INTO marketplace_items (
                 external_id, type, title, description, price, price_str, 
@@ -61,11 +64,11 @@ const marketplaceService = {
                 status = EXCLUDED.status,
                 metadata = EXCLUDED.metadata
         `, [
-            id, 'Transport/Logistics', vehicle_type, `Capacity: ${capacity} | Route: ${route}`,
-            price, `MWK ${Number(price).toLocaleString()}`,
+            id, 'Transport/Logistics', title, description,
+            price, price > 0 ? `MWK ${Number(price).toLocaleString()}` : price,
             location || route, images, driver_id, driver_name,
             'Active',
-            JSON.stringify({ capacity, route })
+            JSON.stringify({ capacity, route, manufacturer, model, operating_range, vehicle_type, location })
         ]);
     },
 

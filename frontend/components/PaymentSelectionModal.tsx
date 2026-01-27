@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { api } from '../services/api';
+import { BRANDS } from '../constants/branding';
 
 interface PaymentSelectionModalProps {
     isOpen: boolean;
@@ -21,7 +22,7 @@ const PaymentSelectionModal: React.FC<PaymentSelectionModalProps> = ({
     amount,
     rideDetails
 }) => {
-    const [selectedMethod, setSelectedMethod] = useState<'online' | 'physical' | 'later' | null>(null);
+    const [selectedMethod, setSelectedMethod] = useState<'online' | 'physical' | 'later'>('online');
     const [phoneNumber, setPhoneNumber] = useState('');
     const [selectedOperator, setSelectedOperator] = useState('');
     const [operators, setOperators] = useState<any[]>([]);
@@ -39,18 +40,12 @@ const PaymentSelectionModal: React.FC<PaymentSelectionModalProps> = ({
     if (!isOpen) return null;
 
     const handleConfirm = async () => {
-        if (selectedMethod) {
-            if (selectedMethod === 'online') {
-                if (!phoneNumber || !selectedOperator) {
-                    alert('Please enter your phone number and select an operator.');
-                    return;
-                }
-                await onSelectPayment(selectedMethod, { phoneNumber, providerRefId: selectedOperator });
-            } else {
-                await onSelectPayment(selectedMethod);
-            }
-            onClose();
+        if (!phoneNumber || phoneNumber.length !== 10 || !selectedOperator) {
+            alert('Please enter a valid 10-digit phone number and select an operator.');
+            return;
         }
+        await onSelectPayment('online', { phoneNumber, providerRefId: selectedOperator });
+        onClose();
     };
 
     return (
@@ -85,121 +80,74 @@ const PaymentSelectionModal: React.FC<PaymentSelectionModalProps> = ({
 
                     {/* Payment Options */}
                     <div className="space-y-4 mb-8">
-                        {/* Online Payment */}
+                        {/* Only Online Payment */}
                         <div className="space-y-3">
-                            <button
-                                onClick={() => setSelectedMethod('online')}
-                                className={`w-full p-5 rounded-2xl border-2 transition-all ${selectedMethod === 'online'
-                                    ? 'border-indigo-600 bg-indigo-50 shadow-lg shadow-indigo-100'
-                                    : 'border-slate-100 bg-white hover:border-indigo-200'
-                                    }`}
-                            >
+                            <div className="w-full p-5 rounded-2xl border-2 border-indigo-600 bg-indigo-50 shadow-lg shadow-indigo-100">
                                 <div className="flex items-center gap-4">
-                                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${selectedMethod === 'online' ? 'border-indigo-600' : 'border-slate-300'
-                                        }`}>
-                                        {selectedMethod === 'online' && (
-                                            <div className="w-3 h-3 rounded-full bg-indigo-600" />
-                                        )}
+                                    <div className="w-6 h-6 rounded-full border-2 border-indigo-600 flex items-center justify-center">
+                                        <div className="w-3 h-3 rounded-full bg-indigo-600" />
                                     </div>
                                     <div className="flex-1 text-left">
                                         <div className="font-black text-slate-900 text-sm">Pay Online</div>
-                                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Airtel Money, Mpamba, or Bank</div>
+                                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Airtel Money or TNM Mpamba</div>
                                     </div>
                                     <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                                     </svg>
                                 </div>
-                            </button>
+                            </div>
 
-                            {selectedMethod === 'online' && (
-                                <div className="p-6 bg-white border-2 border-indigo-100 rounded-[24px] space-y-5 animate-in slide-in-from-top-4 duration-300">
-                                    <div>
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 block px-1">Choose Operator</label>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            {operators.map(op => (
+                            <div className="p-6 bg-white border-2 border-indigo-100 rounded-[24px] space-y-5 animate-in slide-in-from-top-4 duration-300">
+                                <div>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 block px-1">Choose Operator</label>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {operators.map(op => {
+                                            const nameNormalized = op.name?.toLowerCase() || '';
+                                            const isAirtel = nameNormalized.includes('airtel');
+                                            const isTnm = nameNormalized.includes('tnm') || nameNormalized.includes('mpamba');
+                                            const isSelected = selectedOperator === (op.id || op.ref_id);
+
+                                            let activeClass = 'border-indigo-600 bg-indigo-600 text-white shadow-lg shadow-indigo-100';
+                                            if (isAirtel) activeClass = 'border-red-600 bg-red-600 text-white shadow-lg shadow-red-100';
+                                            if (isTnm) activeClass = 'border-green-600 bg-green-600 text-white shadow-lg shadow-green-100';
+
+                                            return (
                                                 <button
                                                     key={op.id || op.ref_id}
                                                     onClick={() => setSelectedOperator(op.id || op.ref_id)}
-                                                    className={`p-4 rounded-xl border-2 text-[10px] font-black uppercase tracking-widest transition-all ${selectedOperator === (op.id || op.ref_id)
-                                                        ? 'border-indigo-600 bg-indigo-600 text-white shadow-lg shadow-indigo-100'
+                                                    className={`p-6 rounded-xl border-2 transition-all flex flex-col items-center justify-center min-h-[100px] ${isSelected
+                                                        ? activeClass
                                                         : 'border-slate-50 bg-slate-50 text-slate-400 hover:border-indigo-200'
                                                         }`}
                                                 >
-                                                    {op.name}
+                                                    <span className={`text-base font-black uppercase tracking-widest text-center leading-tight ${isSelected ? 'text-white' : ''}`}>
+                                                        {op.name}
+                                                    </span>
                                                 </button>
-                                            ))}
-                                            {operators.length === 0 && !loadingOps && (
-                                                <div className="col-span-2 text-center text-[10px] text-slate-400 font-black uppercase tracking-widest p-4 bg-slate-50 rounded-xl">
-                                                    No operators found
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 block px-1">Phone Number</label>
-                                        <input
-                                            type="text"
-                                            value={phoneNumber}
-                                            onChange={(e) => setPhoneNumber(e.target.value)}
-                                            placeholder="e.g. 0991234567"
-                                            className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-xl text-sm font-black focus:border-indigo-600 focus:bg-white transition-all outline-none"
-                                        />
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Physical Payment */}
-                        <button
-                            onClick={() => setSelectedMethod('physical')}
-                            className={`w-full p-5 rounded-2xl border-2 transition-all ${selectedMethod === 'physical'
-                                ? 'border-emerald-600 bg-emerald-50 shadow-lg shadow-emerald-100'
-                                : 'border-slate-100 bg-white hover:border-emerald-200'
-                                }`}
-                        >
-                            <div className="flex items-center gap-4">
-                                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${selectedMethod === 'physical' ? 'border-emerald-600' : 'border-slate-300'
-                                    }`}>
-                                    {selectedMethod === 'physical' && (
-                                        <div className="w-3 h-3 rounded-full bg-emerald-600" />
-                                    )}
-                                </div>
-                                <div className="flex-1 text-left">
-                                    <div className="font-black text-slate-900 text-sm">Pay with Cash</div>
-                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Pay driver directly at pickup</div>
-                                </div>
-                                <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                                </svg>
-                            </div>
-                        </button>
-
-                        {/* Pay Later Option (for rideshare) */}
-                        {rideDetails.type === 'share' && (
-                            <button
-                                onClick={() => setSelectedMethod('later')}
-                                className={`w-full p-5 rounded-2xl border-2 transition-all ${selectedMethod === 'later'
-                                    ? 'border-amber-600 bg-amber-50 shadow-lg shadow-amber-100'
-                                    : 'border-slate-100 bg-white hover:border-amber-200'
-                                    }`}
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${selectedMethod === 'later' ? 'border-amber-600' : 'border-slate-300'
-                                        }`}>
-                                        {selectedMethod === 'later' && (
-                                            <div className="w-3 h-3 rounded-full bg-amber-600" />
+                                            );
+                                        })}
+                                        {operators.length === 0 && !loadingOps && (
+                                            <div className="col-span-2 text-center text-[10px] text-slate-400 font-black uppercase tracking-widest p-4 bg-slate-50 rounded-xl">
+                                                No operators found
+                                            </div>
                                         )}
                                     </div>
-                                    <div className="flex-1 text-left">
-                                        <div className="font-black text-slate-900 text-sm">Pay Later</div>
-                                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Pay after trip completion</div>
-                                    </div>
-                                    <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
                                 </div>
-                            </button>
-                        )}
+                                <div>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 block px-1">Phone Number</label>
+                                    <input
+                                        type="tel"
+                                        value={phoneNumber}
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                            setPhoneNumber(val);
+                                        }}
+                                        placeholder="e.g. 0991234567"
+                                        className="w-full p-5 bg-slate-50 border-2 border-slate-50 rounded-xl text-sm font-black text-slate-900 focus:border-indigo-600 focus:bg-white transition-all outline-none"
+                                    />
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Actions */}
@@ -212,10 +160,10 @@ const PaymentSelectionModal: React.FC<PaymentSelectionModalProps> = ({
                         </button>
                         <button
                             onClick={handleConfirm}
-                            disabled={!selectedMethod}
+                            disabled={!selectedOperator || phoneNumber.length !== 10}
                             className="flex-1 px-6 py-4 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition font-black uppercase tracking-widest text-xs disabled:bg-slate-200 disabled:cursor-not-allowed shadow-xl shadow-indigo-100"
                         >
-                            Confirm
+                            Confirm Payment
                         </button>
                     </div>
                 </div>

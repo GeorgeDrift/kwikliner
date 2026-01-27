@@ -4,6 +4,12 @@ require('dotenv').config();
 const API_URL = process.env.PAYCHANGU_API_URL || 'https://api.paychangu.com';
 const SECRET_KEY = process.env.PAYCHANGU_SECRET_KEY;
 
+const checkConfiguration = () => {
+    if (!SECRET_KEY || SECRET_KEY === 'yours_here' || SECRET_KEY === 'your_secret_key_here') {
+        throw new Error('PayChangu Secret Key is not configured correctly in .env');
+    }
+};
+
 const apiClient = axios.create({
     baseURL: API_URL,
     headers: {
@@ -30,6 +36,7 @@ exports.getMobileMoneyOperators = async () => {
  * Initiate a mobile money payment
  */
 exports.initiatePayment = async (paymentData) => {
+    checkConfiguration();
     const crypto = require('crypto');
     try {
         let formattedMobile = paymentData.mobile.replace(/\D/g, '');
@@ -62,11 +69,12 @@ exports.initiatePayment = async (paymentData) => {
  * Verify a payment
  */
 exports.verifyPayment = async (chargeId) => {
+    checkConfiguration();
     try {
         const response = await apiClient.get(`/mobile-money/payments/${chargeId}/verify`);
         return response.data;
     } catch (error) {
-        console.error('PayChangu verifyPayment Error:', error.response?.data || error.message);
+        // Error already logged by interceptor
         throw error;
     }
 };
@@ -75,6 +83,7 @@ exports.verifyPayment = async (chargeId) => {
  * Initiate a payout to a mobile money account
  */
 exports.initiatePayout = async (payoutData) => {
+    checkConfiguration();
     try {
         let formattedMobile = payoutData.mobile.replace(/\D/g, '');
 
@@ -98,7 +107,7 @@ exports.initiatePayout = async (payoutData) => {
         const response = await apiClient.post('/mobile-money/payouts/initialize', payload);
         return response.data;
     } catch (error) {
-        console.error('PayChangu initiatePayout Error:', error.response?.data || error.message);
+        // Error already logged by interceptor
         throw error;
     }
 };
@@ -143,6 +152,7 @@ exports.getSupportedBanks = async (currency = 'MWK') => {
  * Initiate a bank payout
  */
 exports.initiateBankPayout = async (payoutData) => {
+    checkConfiguration();
     try {
         const payload = {
             bank_code: payoutData.bank_code,

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
     CheckCircle, ChevronRight, ArrowLeft, ArrowRight,
-    User, Truck, FileText, Shield, Heart, DollarSign, AlertTriangle, BookOpen, Loader2, LogIn
+    User, Truck, FileText, Shield, Heart, DollarSign, AlertTriangle, BookOpen, Loader2, LogIn, Briefcase, Store
 } from 'lucide-react';
 import { UserRole } from '../types';
 import { useToast } from '../components/ToastContext';
@@ -57,7 +57,7 @@ const DriverRegistration: React.FC<DriverRegistrationProps> = ({ onComplete, onB
     const validateField = (name: string, value: any) => {
         let error = '';
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        const phoneRegex = /^(0|265)\d{9}$/;
+        const phoneRegex = /^0\d{9}$/;
 
         switch (name) {
             case 'email':
@@ -65,8 +65,9 @@ const DriverRegistration: React.FC<DriverRegistrationProps> = ({ onComplete, onB
                 break;
             case 'phone':
             case 'emergencyPhone':
+            case 'accountDetails':
                 const phoneDigits = (value || '').replace(/\D/g, '');
-                if (!phoneRegex.test(phoneDigits)) error = 'Phone must start with 0 or 265 followed by exactly 9 digits';
+                if (!phoneRegex.test(phoneDigits)) error = 'Phone must be exactly 10 digits starting with 0';
                 break;
             case 'password':
                 if (value.length < 6) error = 'Password must be at least 6 characters';
@@ -159,7 +160,17 @@ const DriverRegistration: React.FC<DriverRegistrationProps> = ({ onComplete, onB
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <input placeholder="Phone" maxLength={13} className={`p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none ${errors.phone ? 'ring-2 ring-red-500' : ''}`} value={formData.phone} onChange={e => handleChange('phone', e.target.value)} />
+                                    <input
+                                        type="tel"
+                                        placeholder="Phone (10 digits)"
+                                        maxLength={10}
+                                        className={`p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none ${errors.phone ? 'ring-2 ring-red-500' : ''}`}
+                                        value={formData.phone}
+                                        onChange={e => {
+                                            const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                            handleChange('phone', val);
+                                        }}
+                                    />
                                     {errors.phone && <p className="text-red-500 text-[10px] font-bold mt-1 ml-2">{errors.phone}</p>}
                                 </div>
                                 <div>
@@ -302,7 +313,17 @@ const DriverRegistration: React.FC<DriverRegistrationProps> = ({ onComplete, onB
                             <input placeholder="Name" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.emergencyName} onChange={e => handleChange('emergencyName', e.target.value)} />
                             <input placeholder="Relationship" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.emergencyRel} onChange={e => handleChange('emergencyRel', e.target.value)} />
                             <div className="grid grid-cols-2 gap-4">
-                                <input placeholder="Phone" maxLength={13} className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.emergencyPhone} onChange={e => handleChange('emergencyPhone', e.target.value)} />
+                                <input
+                                    type="tel"
+                                    placeholder="Phone (10 digits)"
+                                    maxLength={10}
+                                    className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none"
+                                    value={formData.emergencyPhone}
+                                    onChange={e => {
+                                        const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                        handleChange('emergencyPhone', val);
+                                    }}
+                                />
                                 <input placeholder="Blood Group (Opt)" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.bloodGroup} onChange={e => handleChange('bloodGroup', e.target.value)} />
                             </div>
                         </div>
@@ -409,11 +430,18 @@ const DriverRegistration: React.FC<DriverRegistrationProps> = ({ onComplete, onB
                             </button>
                         </div>
                         <input
-                            placeholder={formData.paymentMethod === 'Mobile Money' ? "Phone Number" : "Account Number / Details"}
-                            maxLength={13}
+                            type={formData.paymentMethod === 'Mobile Money' ? "tel" : "text"}
+                            placeholder={formData.paymentMethod === 'Mobile Money' ? "Phone Number (10 digits)" : "Account Number / Details"}
+                            maxLength={formData.paymentMethod === 'Mobile Money' ? 10 : 20}
                             className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none"
                             value={formData.accountDetails}
-                            onChange={e => handleChange('accountDetails', e.target.value)}
+                            onChange={e => {
+                                let val = e.target.value;
+                                if (formData.paymentMethod === 'Mobile Money') {
+                                    val = val.replace(/\D/g, '').slice(0, 10);
+                                }
+                                handleChange('accountDetails', val);
+                            }}
                         />
                         <p className="text-center text-xs text-slate-400 dark:text-slate-500 font-medium px-4">
                             Drivers acknowledge that earnings are subject to KwikLiner’s commission and payment processing timelines.
@@ -497,7 +525,7 @@ const LoginForm: React.FC<{ onRegisterClick: () => void; onRegister: (user: any)
 
     const handleLogin = async () => {
         if (!email || !password) {
-            setError('Email and password are required');
+            setError('Please enter your email and password');
             return;
         }
 
@@ -505,7 +533,7 @@ const LoginForm: React.FC<{ onRegisterClick: () => void; onRegister: (user: any)
         setError('');
 
         try {
-            const response = await api.loginWithEmail(email, password);
+            const response = await api.login(email, password);
             if (response && response.token) {
                 localStorage.setItem('token', response.token);
                 onRegister(response.user);
@@ -536,7 +564,7 @@ const LoginForm: React.FC<{ onRegisterClick: () => void; onRegister: (user: any)
                         <label className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase ml-1 block mb-2">Email Address</label>
                         <input
                             type="email"
-                            placeholder="your@email.com"
+                            placeholder="e.g. user@example.com"
                             value={email}
                             onChange={(e) => {
                                 setEmail(e.target.value);
@@ -593,32 +621,251 @@ const LoginForm: React.FC<{ onRegisterClick: () => void; onRegister: (user: any)
     );
 };
 
+const ShipperRegistration: React.FC<DriverRegistrationProps> = ({ onComplete, onBack, isLoading }) => {
+    const { addToast } = useToast();
+    const [formData, setFormData] = useState({
+        fullName: '', phone: '', email: '', password: '', companyName: '',
+        agreeTerms: false
+    });
+
+    const handleSubmit = () => {
+        onComplete({
+            role: UserRole.SHIPPER,
+            name: formData.fullName,
+            email: formData.email,
+            phone: formData.phone,
+            password: formData.password,
+            companyName: formData.companyName,
+            isVerified: true
+        });
+    };
+
+    return (
+        <div className="space-y-6 animate-in fade-in slide-in-from-right-8 max-w-md mx-auto py-10">
+            <div className="text-center mb-10">
+                <div className="h-20 w-20 bg-blue-600 rounded-[28px] flex items-center justify-center text-white mx-auto mb-6 shadow-2xl shadow-blue-200">
+                    <User size={40} />
+                </div>
+                <h2 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">Shipper account</h2>
+                <p className="text-slate-500 dark:text-slate-400 font-bold mt-2">Start moving goods across Africa</p>
+            </div>
+
+            <div className="space-y-4">
+                <input placeholder="Full Name" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white" value={formData.fullName} onChange={e => setFormData({ ...formData, fullName: e.target.value })} />
+                <input placeholder="Company Name (Optional)" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white" value={formData.companyName} onChange={e => setFormData({ ...formData, companyName: e.target.value })} />
+                <input placeholder="Phone Number" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
+                <input placeholder="Email Address" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
+                <input type="password" placeholder="Create Password" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
+
+                <label className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl cursor-pointer">
+                    <input type="checkbox" className="h-5 w-5 rounded-md accent-blue-600" checked={formData.agreeTerms} onChange={e => setFormData({ ...formData, agreeTerms: e.target.checked })} />
+                    <span className="text-sm font-bold text-slate-700 dark:text-slate-300">I agree to KwikLiner Terms & Conditions</span>
+                </label>
+            </div>
+
+            <button
+                onClick={handleSubmit}
+                disabled={!formData.fullName || !formData.phone || !formData.password || !formData.agreeTerms || isLoading}
+                className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl hover:scale-[1.02] transition-all disabled:opacity-50"
+            >
+                {isLoading ? <Loader2 className="animate-spin mx-auto" /> : 'Create Shipper Account'}
+            </button>
+
+            <button onClick={onBack} className="w-full py-3 text-slate-400 font-bold text-xs uppercase tracking-widest hover:text-slate-600">
+                Change Role
+            </button>
+        </div>
+    );
+};
+
+
+const HardwareOwnerRegistration: React.FC<DriverRegistrationProps> = ({ onComplete, onBack, isLoading }) => {
+    const { addToast } = useToast();
+    const [formData, setFormData] = useState({
+        fullName: '', phone: '', email: '', password: '', storeName: '',
+        location: '', agreeTerms: false
+    });
+
+    const handleSubmit = () => {
+        onComplete({
+            role: UserRole.HARDWARE_OWNER,
+            name: formData.fullName,
+            email: formData.email,
+            phone: formData.phone,
+            password: formData.password,
+            companyName: formData.storeName,
+            isVerified: true
+        });
+    };
+
+    return (
+        <div className="space-y-6 animate-in fade-in slide-in-from-right-8 max-w-md mx-auto py-10">
+            <div className="text-center mb-10">
+                <div className="h-20 w-20 bg-indigo-600 rounded-[28px] flex items-center justify-center text-white mx-auto mb-6 shadow-2xl shadow-indigo-200">
+                    <Store size={40} />
+                </div>
+                <h2 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">Hardware Store</h2>
+                <p className="text-slate-500 dark:text-slate-400 font-bold mt-2">Rent equipment and sell spares</p>
+            </div>
+
+            <div className="space-y-4">
+                <input placeholder="Owner Full Name" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white" value={formData.fullName} onChange={e => setFormData({ ...formData, fullName: e.target.value })} />
+                <input placeholder="Store / Company Name" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white" value={formData.storeName} onChange={e => setFormData({ ...formData, storeName: e.target.value })} />
+                <input placeholder="City / Location" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white" value={formData.location} onChange={e => setFormData({ ...formData, location: e.target.value })} />
+                <input placeholder="Business Phone" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
+                <input placeholder="Business Email" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
+                <input type="password" placeholder="Create Password" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
+
+                <label className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl cursor-pointer">
+                    <input type="checkbox" className="h-5 w-5 rounded-md accent-indigo-600" checked={formData.agreeTerms} onChange={e => setFormData({ ...formData, agreeTerms: e.target.checked })} />
+                    <span className="text-sm font-bold text-slate-700 dark:text-slate-300">I agree to KwikLiner Terms & Conditions</span>
+                </label>
+            </div>
+
+            <button
+                onClick={handleSubmit}
+                disabled={!formData.fullName || !formData.phone || !formData.password || !formData.agreeTerms || isLoading}
+                className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl hover:scale-[1.02] transition-all disabled:opacity-50"
+            >
+                {isLoading ? <Loader2 className="animate-spin mx-auto" /> : 'Complete Store Setup'}
+            </button>
+
+            <button onClick={onBack} className="w-full py-3 text-slate-400 font-bold text-xs uppercase tracking-widest hover:text-slate-600">
+                Change Role
+            </button>
+        </div>
+    );
+};
+
+// ROLE SELECTION COMPONENT
+const RegistrationRoleSelection: React.FC<{ onSelect: (role: string) => void }> = ({ onSelect }) => {
+    const roles = [
+        { id: 'SHIPPER', title: 'Shipper', desc: 'I want to move loads and find trucks', icon: <User size={32} />, color: 'bg-blue-600 shadow-blue-200' },
+        { id: 'DRIVER', title: 'Driver', desc: 'I own a truck and want to find work', icon: <Truck size={32} />, color: 'bg-emerald-600 shadow-emerald-200' },
+        { id: 'LOGISTICS_OWNER', title: 'Logistics Co.', desc: 'I manage a fleet and multiple drivers', icon: <Briefcase size={32} />, color: 'bg-indigo-600 shadow-indigo-200' },
+        { id: 'HARDWARE_OWNER', title: 'Hardware Owner', desc: 'I sell spares and rent out equipment', icon: <Store size={32} />, color: 'bg-amber-600 shadow-amber-200' },
+    ];
+
+    return (
+        <div className="max-w-6xl mx-auto py-20 px-6 animate-in fade-in zoom-in-95 duration-500">
+            <div className="text-center mb-16">
+                <h2 className="text-5xl font-black text-slate-900 dark:text-white tracking-tighter mb-4">Choose your journey</h2>
+                <p className="text-lg text-slate-500 dark:text-slate-400 font-medium">Select how you want to use the KwikLiner network.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {roles.map((role) => (
+                    <button
+                        key={role.id}
+                        onClick={() => onSelect(role.id)}
+                        className="group bg-white dark:bg-slate-800 p-8 rounded-[40px] border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-2xl hover:border-blue-500 dark:hover:border-blue-500 transition-all text-center flex flex-col items-center"
+                    >
+                        <div className={`h-20 w-20 ${role.color} rounded-[30px] flex items-center justify-center text-white mb-8 shadow-xl group-hover:scale-110 transition-transform`}>
+                            {role.icon}
+                        </div>
+                        <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">{role.title}</h3>
+                        <p className="text-slate-500 dark:text-slate-400 text-xs font-medium leading-relaxed">{role.desc}</p>
+                        <div className="mt-8 h-10 w-10 rounded-full bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-300 dark:text-slate-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                            <ChevronRight size={20} />
+                        </div>
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+};
+
 // WRAPPER COMPONENT
+import FleetOwnerRegistration from './FleetOwnerRegistration';
+
 interface RegistrationFlowProps {
     onRegister: (user: any) => void;
     defaultMode?: 'login' | 'register';
 }
 
 const RegistrationFlow: React.FC<RegistrationFlowProps> = ({ onRegister, defaultMode = 'register' }) => {
-    const [mode, setMode] = useState<'login' | 'register'>(defaultMode);
+    const [mode, setMode] = useState<'login' | 'register' | 'select' | 'reg-shipper' | 'reg-driver' | 'reg-fleet' | 'reg-hardware'>(
+        defaultMode === 'register' ? 'select' : 'login'
+    );
+    const [isLoading, setIsLoading] = useState(false);
+    const { addToast } = useToast();
     const navigate = useNavigate();
+
+    const handleRegistrationComplete = async (userData: any) => {
+        setIsLoading(true);
+        try {
+            // Simplified for now, real app would POST to /api/auth/register
+            const res = await fetch('http://localhost:5000/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(userData)
+            });
+            const data = await res.json();
+
+            if (data.token) {
+                localStorage.setItem('token', data.token);
+                onRegister(data.user);
+                addToast("Account created successfully!", "success");
+                navigate('/dashboard');
+            } else {
+                addToast(data.error || "Registration failed", "error");
+            }
+        } catch (err) {
+            addToast("Network error during registration", "error");
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     if (mode === 'login') {
         return (
             <LoginForm
-                onRegisterClick={() => setMode('register')}
+                onRegisterClick={() => setMode('select')}
                 onRegister={onRegister}
             />
         );
     }
 
+    if (mode === 'select') {
+        return <RegistrationRoleSelection onSelect={(role) => {
+            if (role === 'SHIPPER') setMode('reg-shipper');
+            else if (role === 'DRIVER') setMode('reg-driver');
+            else if (role === 'LOGISTICS_OWNER') setMode('reg-fleet');
+            else setMode('reg-hardware');
+        }} />;
+    }
+
     return (
         <div className="flex flex-col min-h-[calc(100vh-200px)]">
             <div className="flex-grow">
-                <DriverRegistration
-                    onComplete={onRegister}
-                    onBack={() => navigate('/')}
-                />
+                {mode === 'reg-shipper' && (
+                    <ShipperRegistration
+                        onComplete={handleRegistrationComplete}
+                        onBack={() => setMode('select')}
+                        isLoading={isLoading}
+                    />
+                )}
+                {mode === 'reg-driver' && (
+                    <DriverRegistration
+                        onComplete={handleRegistrationComplete}
+                        onBack={() => setMode('select')}
+                        isLoading={isLoading}
+                    />
+                )}
+                {mode === 'reg-fleet' && (
+                    <FleetOwnerRegistration
+                        onComplete={handleRegistrationComplete}
+                        onBack={() => setMode('select')}
+                        isLoading={isLoading}
+                    />
+                )}
+                {mode === 'reg-hardware' && (
+                    <HardwareOwnerRegistration
+                        onComplete={handleRegistrationComplete}
+                        onBack={() => setMode('select')}
+                        isLoading={isLoading}
+                    />
+                )}
             </div>
             <div className="text-center pb-8 pt-4">
                 <p className="text-slate-600 dark:text-slate-400 text-sm font-medium">

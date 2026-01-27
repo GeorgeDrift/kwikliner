@@ -46,15 +46,17 @@ const FleetOwnerRegistration: React.FC<FleetOwnerRegistrationProps> = ({ onCompl
     const validateField = (name: string, value: any) => {
         let error = '';
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        const phoneRegex = /^(0|265)\d{9}$/;
+        const phoneRegex = /^0\d{9}$/;
 
         switch (name) {
             case 'email':
                 if (value && !emailRegex.test(value)) error = 'Invalid email address';
                 break;
             case 'phone':
+            case 'ownerPhone':
+            case 'ref1Phone':
                 const phoneDigits = (value || '').replace(/\D/g, '');
-                if (!phoneRegex.test(phoneDigits)) error = 'Phone must start with 0 or 265 followed by exactly 9 digits';
+                if (!phoneRegex.test(phoneDigits)) error = 'Phone must be exactly 10 digits starting with 0';
                 break;
             case 'password':
                 if (value.length < 6) error = 'Password must be at least 6 characters';
@@ -100,7 +102,7 @@ const FleetOwnerRegistration: React.FC<FleetOwnerRegistrationProps> = ({ onCompl
                     <div className="space-y-6 animate-in fade-in slide-in-from-right-8">
                         <div className="text-center mb-8">
                             <h2 className="text-3xl font-black text-slate-900 dark:text-white">Company Profile</h2>
-                            <p className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wide">Step 1 of 8</p>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wide">Step 1 of 9</p>
                         </div>
                         <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
@@ -121,7 +123,17 @@ const FleetOwnerRegistration: React.FC<FleetOwnerRegistrationProps> = ({ onCompl
                             <input placeholder="P.O. Box (Optional)" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.poBox} onChange={e => handleChange('poBox', e.target.value)} />
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <input placeholder="Phone" maxLength={13} className={`p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none ${errors.phone ? 'ring-2 ring-red-500' : ''}`} value={formData.phone} onChange={e => handleChange('phone', e.target.value)} />
+                                    <input
+                                        type="tel"
+                                        placeholder="Company Phone (10 digits)"
+                                        maxLength={10}
+                                        className={`p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none ${errors.phone ? 'ring-2 ring-red-500' : ''}`}
+                                        value={formData.phone}
+                                        onChange={e => {
+                                            const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                            handleChange('phone', val);
+                                        }}
+                                    />
                                     {errors.phone && <p className="text-red-500 text-[10px] font-bold mt-1 ml-2">{errors.phone}</p>}
                                 </div>
                                 <div>
@@ -154,7 +166,7 @@ const FleetOwnerRegistration: React.FC<FleetOwnerRegistrationProps> = ({ onCompl
                     <div className="space-y-6 animate-in fade-in slide-in-from-right-8">
                         <div className="text-center mb-8">
                             <h2 className="text-3xl font-black text-slate-900 dark:text-white">Owner Information</h2>
-                            <p className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wide">Step 2 of 8</p>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wide">Step 2 of 9</p>
                         </div>
                         <div className="space-y-4">
                             <input placeholder="Full Legal Name" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.ownerName} onChange={e => handleChange('ownerName', e.target.value)} />
@@ -169,12 +181,44 @@ const FleetOwnerRegistration: React.FC<FleetOwnerRegistrationProps> = ({ onCompl
                         </button>
                     </div>
                 );
-            case 3: // Vehicle Info (Simplified 1st Vehicle)
+            case 3: // Fleet Size
+                return (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-right-8">
+                        <div className="text-center mb-8">
+                            <h2 className="text-3xl font-black text-slate-900 dark:text-white">Fleet Capacity</h2>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wide">Step 3 of 9</p>
+                        </div>
+                        <div className="bg-slate-900 dark:bg-slate-950 p-10 rounded-[40px] text-center border border-slate-800 shadow-2xl relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/10 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-blue-600/20 transition-all"></div>
+                            <Truck size={48} className="mx-auto text-blue-500 mb-6 drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]" />
+                            <h4 className="text-xl font-black text-white mb-2">How many vehicles do you manage?</h4>
+                            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-8">This helps us scale your dashboard</p>
+
+                            <div className="max-w-[200px] mx-auto relative">
+                                <input
+                                    type="number"
+                                    min="1"
+                                    placeholder="0"
+                                    className="w-full bg-slate-800/50 border-2 border-slate-700 rounded-3xl p-6 text-4xl font-black text-center text-white focus:border-blue-500 transition-all outline-none"
+                                    value={formData.vehicleCount}
+                                    onChange={e => handleChange('vehicleCount', parseInt(e.target.value) || 1)}
+                                />
+                                <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-blue-600 px-4 py-1 rounded-full">
+                                    <span className="text-[10px] font-black text-white uppercase tracking-tighter">Vehicles</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button onClick={handleNext} className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl hover:scale-[1.02] transition-all">
+                            Continue
+                        </button>
+                    </div>
+                );
+            case 4: // Vehicle Info (Simplified 1st Vehicle)
                 return (
                     <div className="space-y-6 animate-in fade-in slide-in-from-right-8">
                         <div className="text-center mb-8">
                             <h2 className="text-3xl font-black text-slate-900 dark:text-white">Vehicle Details</h2>
-                            <p className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wide">Step 3 of 8</p>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wide">Step 4 of 9</p>
                         </div>
                         <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-3xl border border-blue-100 dark:border-blue-800 mb-6">
                             <div className="flex items-center gap-4 mb-4">
@@ -200,12 +244,12 @@ const FleetOwnerRegistration: React.FC<FleetOwnerRegistrationProps> = ({ onCompl
                         </button>
                     </div>
                 );
-            case 4: // Documentation
+            case 5: // Documentation
                 return (
                     <div className="space-y-6 animate-in fade-in slide-in-from-right-8">
                         <div className="text-center mb-8">
                             <h2 className="text-3xl font-black text-slate-900 dark:text-white">Documents</h2>
-                            <p className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wide">Step 4 of 8</p>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wide">Step 5 of 9</p>
                         </div>
                         <div className="space-y-4">
                             {['Business License', 'Certificate of Incorporation', 'Cargo Insurance Policy', 'Tax Clearance'].map((doc, i) => (
@@ -214,7 +258,41 @@ const FleetOwnerRegistration: React.FC<FleetOwnerRegistrationProps> = ({ onCompl
                                         <FileText className="text-slate-400" size={20} />
                                         <span className="font-bold text-slate-700 dark:text-slate-300 text-sm">{doc}</span>
                                     </div>
-                                    <button className="px-4 py-2 bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase tracking-widest rounded-lg border border-blue-100 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors">Upload</button>
+                                    <div className="flex items-center gap-2">
+                                        {/* Status Indicator */}
+                                        {(formData as any)[`doc_${i}`] && <CheckCircle size={16} className="text-green-500" />}
+
+                                        <input
+                                            type="file"
+                                            id={`file-${i}`}
+                                            className="hidden"
+                                            accept=".pdf,.jpg,.jpeg,.png"
+                                            onChange={async (e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) {
+                                                    try {
+                                                        // Simplified upload simulation or base64 conversion
+                                                        // const base64 = await fileToBase64(file);
+                                                        // In a real app we'd upload to S3 here.
+                                                        // For now just mark as "uploaded" in state
+                                                        handleChange(`doc_${i}`, file.name); // Storing filename as proof
+                                                        addToast(`${doc} uploaded successfully`, 'success');
+                                                    } catch (err) {
+                                                        addToast('Upload failed', 'error');
+                                                    }
+                                                }
+                                            }}
+                                        />
+                                        <button
+                                            onClick={() => document.getElementById(`file-${i}`)?.click()}
+                                            className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg border transition-colors ${(formData as any)[`doc_${i}`]
+                                                    ? 'bg-green-50 text-green-600 border-green-100'
+                                                    : 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-slate-700 hover:bg-blue-50'
+                                                }`}
+                                        >
+                                            {(formData as any)[`doc_${i}`] ? 'Re-Upload' : 'Upload'}
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -225,31 +303,41 @@ const FleetOwnerRegistration: React.FC<FleetOwnerRegistrationProps> = ({ onCompl
                         <button onClick={handleNext} className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl hover:scale-[1.02] transition-all">
                             Continue
                         </button>
-                    </div>
+                    </div >
                 );
-            case 5: // References
+            case 6: // References
                 return (
                     <div className="space-y-6 animate-in fade-in slide-in-from-right-8">
                         <div className="text-center mb-8">
                             <h2 className="text-3xl font-black text-slate-900 dark:text-white">References</h2>
-                            <p className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wide">Step 5 of 8</p>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wide">Step 6 of 9</p>
                         </div>
                         <p className="text-sm font-medium text-slate-500 mb-4">Provide at least one professional reference.</p>
                         <div className="space-y-4">
-                            <input placeholder="Reference Name" className="p-4 bg-slate-50 rounded-2xl font-bold w-full" value={formData.ref1Name} onChange={e => handleChange('ref1Name', e.target.value)} />
-                            <input placeholder="Reference Phone" maxLength={13} className="p-4 bg-slate-50 rounded-2xl font-bold w-full" value={formData.ref1Phone} onChange={e => handleChange('ref1Phone', e.target.value)} />
+                            <input placeholder="Reference Name" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.ref1Name} onChange={e => handleChange('ref1Name', e.target.value)} />
+                            <input
+                                type="tel"
+                                placeholder="Reference Phone (10 digits)"
+                                maxLength={10}
+                                className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none"
+                                value={formData.ref1Phone}
+                                onChange={e => {
+                                    const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                    handleChange('ref1Phone', val);
+                                }}
+                            />
                         </div>
                         <button onClick={handleNext} className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl hover:scale-[1.02] transition-all">
                             Continue
                         </button>
                     </div>
                 );
-            case 6: // Financials
+            case 7: // Financials
                 return (
                     <div className="space-y-6 animate-in fade-in slide-in-from-right-8">
                         <div className="text-center mb-8">
                             <h2 className="text-3xl font-black text-slate-900 dark:text-white">Financials</h2>
-                            <p className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wide">Step 6 of 8</p>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wide">Step 7 of 9</p>
                         </div>
                         <div className="space-y-4">
                             <input placeholder="Bank Name" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.bankName} onChange={e => handleChange('bankName', e.target.value)} />
@@ -262,12 +350,12 @@ const FleetOwnerRegistration: React.FC<FleetOwnerRegistrationProps> = ({ onCompl
                         </button>
                     </div>
                 );
-            case 7: // Compliance Agreement
+            case 8: // Compliance Agreement
                 return (
                     <div className="space-y-6 animate-in fade-in slide-in-from-right-8">
                         <div className="text-center mb-8">
                             <h2 className="text-3xl font-black text-slate-900 dark:text-white">Compliance</h2>
-                            <p className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wide">Step 7 of 8</p>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wide">Step 8 of 9</p>
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-800 p-6 rounded-3xl border border-slate-100 dark:border-slate-700 space-y-4">
                             <div className="flex items-center gap-3">
@@ -304,12 +392,12 @@ const FleetOwnerRegistration: React.FC<FleetOwnerRegistrationProps> = ({ onCompl
                         </button>
                     </div>
                 );
-            case 8: // Terms & Submit
+            case 9: // Terms & Submit
                 return (
                     <div className="space-y-6 animate-in fade-in slide-in-from-right-8">
                         <div className="text-center mb-8">
                             <h2 className="text-3xl font-black text-slate-900 dark:text-white">Final Review</h2>
-                            <p className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wide">Step 8 of 8</p>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wide">Step 9 of 9</p>
                         </div>
 
                         <div className="p-6 border border-slate-200 dark:border-slate-700 rounded-3xl bg-slate-50 dark:bg-slate-800 h-64 overflow-y-auto mb-6 text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
@@ -345,8 +433,18 @@ const FleetOwnerRegistration: React.FC<FleetOwnerRegistrationProps> = ({ onCompl
                 <button onClick={page === 1 ? onBack : handlePrev} className="flex items-center text-slate-400 dark:text-slate-500 font-bold hover:text-slate-900 dark:hover:text-white transition-colors">
                     <ArrowLeft size={16} className="mr-2" /> Back
                 </button>
-                {page < 8 && (
-                    <button onClick={handleNext} className="flex items-center text-blue-600 dark:text-blue-400 font-bold hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
+                {page < 9 && (
+                    <button
+                        onClick={() => {
+                            if (page === 1 && Object.values(errors).some(e => e)) {
+                                addToast('Please correct errors.', 'error');
+                                return;
+                            }
+                            handleNext();
+                        }}
+                        disabled={page === 1 && (!formData.companyName || !formData.phone || !formData.email || !formData.password || Object.values(errors).some(e => e))}
+                        className="flex items-center text-blue-600 dark:text-blue-400 font-bold hover:text-blue-700 dark:hover:text-blue-300 transition-colors uppercase text-[10px] tracking-widest disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
                         Next <ArrowRight size={16} className="ml-2" />
                     </button>
                 )}

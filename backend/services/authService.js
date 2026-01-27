@@ -106,21 +106,19 @@ const authService = {
     },
 
     login: async (credentials) => {
-        const { email, password, role } = credentials;
+        const { email, password } = credentials;
 
-        // For demo convenience, if email is missing we search by role
-        const query = email ? 'SELECT * FROM users WHERE email = $1' : 'SELECT * FROM users WHERE role = $1 LIMIT 1';
-        const params = email ? [email] : [role];
+        if (!email || !password) {
+            throw new Error('Email and password are required');
+        }
 
-        const result = await pool.query(query, params);
+        const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
         const user = result.rows[0];
 
         if (!user) throw new Error('User not found');
 
-        if (email && password) {
-            const isMatch = await bcrypt.compare(password, user.password);
-            if (!isMatch) throw new Error('Invalid credentials');
-        }
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) throw new Error('Invalid credentials');
 
         if (!user.is_verified) {
             throw new Error('Your email is not verified. Please check your inbox for the verification link.');

@@ -56,12 +56,30 @@ const logisticsController = {
         }
     },
 
+    deleteListing: async (req, res) => {
+        try {
+            await logisticsService.deleteListing(req.user.id, req.params.id);
+            res.json({ success: true });
+        } catch (err) {
+            res.status(500).json({ error: err.message || 'Failed to delete listing' });
+        }
+    },
+
     getRevenueAnalytics: async (req, res) => {
         try {
             const analytics = await logisticsService.getRevenueAnalytics(req.user.id);
             res.json(analytics);
         } catch (err) {
             res.status(500).json({ error: 'Failed to fetch revenue analytics' });
+        }
+    },
+
+    getTrips: async (req, res) => {
+        try {
+            const trips = await logisticsService.getMyTrips(req.user.id);
+            res.json(trips);
+        } catch (err) {
+            res.status(500).json({ error: 'Failed to fetch trips' });
         }
     }
 };

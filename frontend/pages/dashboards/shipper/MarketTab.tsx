@@ -62,51 +62,51 @@ const MarketTab: React.FC<MarketTabProps> = ({
                 ))}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {marketItems.filter(i => {
                     return marketFilter === 'All' || i.cat === marketFilter;
                 }).map((item, idx) => (
-                    <div key={idx} className="bg-white dark:bg-slate-800 rounded-[32px] p-4 border border-slate-50 dark:border-slate-700 shadow-sm hover:shadow-2xl transition-all group">
-                        <div className="h-48 rounded-[24px] overflow-hidden mb-4 relative bg-slate-100 dark:bg-slate-900">
+                    <div key={idx} className="bg-white dark:bg-slate-800 rounded-[24px] p-3 border border-slate-50 dark:border-slate-700 shadow-sm hover:shadow-xl transition-all group">
+                        <div className="h-32 rounded-xl overflow-hidden mb-3 relative bg-slate-100 dark:bg-slate-900">
                             {item.cat === 'Transport/Logistics' && item.images ? (
                                 <VehicleSlider images={item.images} />
                             ) : (
                                 <img src={item.img} className="w-full h-full object-cover group-hover:scale-110 transition-transform" alt={item.name} />
                             )}
-                            <div className={`absolute top-3 left-3 backdrop-blur-md px-3 py-1 rounded-lg text-[11px] font-black uppercase tracking-widest ${item.cat === 'Transport/Logistics' ? 'bg-emerald-500/90 text-white' : item.cat === 'Cargo' ? 'bg-amber-500/90 text-white' : 'bg-white/90 text-blue-600'}`}>
+                            <div className={`absolute top-2 left-2 backdrop-blur-md px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest ${item.cat === 'Transport/Logistics' ? 'bg-emerald-500/90 text-white' : item.cat === 'Cargo' ? 'bg-amber-500/90 text-white' : 'bg-white/90 text-blue-600'}`}>
                                 {item.cat}
                             </div>
                         </div>
-                        <div className="px-2 pb-2">
-                            <h4 className="font-black text-slate-900 dark:text-slate-100 text-sm line-clamp-1 mb-1">{item.name}</h4>
-                            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 mb-2">{item.provider}</p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-2 line-clamp-2">{item.details}</p>
-                            <p className="text-lg font-black text-blue-600 dark:text-blue-400 mb-4">{item.priceStr}</p>
+                        <div className="px-1 pb-1">
+                            <h4 className="font-black text-slate-900 dark:text-slate-100 text-[13px] leading-tight line-clamp-1 mb-1">{item.name}</h4>
+                            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mb-1">{item.provider}</p>
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-2 line-clamp-2 leading-tight">{item.details}</p>
+                            <p className="text-base font-black text-blue-600 dark:text-blue-400 mb-3">{item.priceStr}</p>
 
                             {item.cat === 'Equipment' ? (
-                                <button onClick={() => addToCart(item)} className="w-full py-3 bg-blue-600 text-white hover:bg-blue-700 rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-blue-100 transition-all">
-                                    <ShoppingCart size={14} /> Add to Cart
+                                <button onClick={() => addToCart(item)} className="w-full py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-1.5 shadow-md shadow-blue-100 transition-all">
+                                    <ShoppingCart size={12} /> Add
                                 </button>
                             ) : item.cat === 'Cargo' ? (
                                 <button
                                     onClick={() => handleAcceptJob && handleAcceptJob(item)}
-                                    className={`w-full py-3 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg transition-all hover:scale-[1.02] active:scale-95 touch-manipulation ${item.priceStr === 'Open to Bids' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+                                    className={`w-full py-2 text-white rounded-lg font-black text-[10px] uppercase tracking-widest shadow-md transition-all hover:scale-[1.02] active:scale-95 touch-manipulation ${item.priceStr === 'Open to Bids' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
                                 >
-                                    {item.priceStr === 'Open to Bids' ? 'Submit Bid' : 'Accept Job'}
+                                    {item.priceStr === 'Open to Bids' ? 'Bid' : 'Accept'}
                                 </button>
-                            ) : item.cat === 'Transport/Logistics' ? ( // Assuming 'Transport/Logistics' items are for hiring
+                            ) : item.cat === 'Transport/Logistics' ? (
                                 <button
-                                    onClick={() => handleDirectHire(item.provider, item.driverId)} // Changed from driver.provider to item.provider and added driverId
-                                    className={`w-full py-3 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg transition-all hover:scale-[1.02] active:scale-95 touch-manipulation ${(hiringUrgency[idx] || 'standard') === 'urgent' ? 'bg-amber-500 hover:bg-amber-600' : (hiringUrgency[idx] || 'standard') === 'flexible' ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-blue-600 hover:bg-blue-700'}`}
+                                    onClick={() => handleDirectHire(item.provider, item.driverId)}
+                                    className={`w-full py-2 text-white rounded-lg font-black text-[10px] uppercase tracking-widest shadow-md transition-all hover:scale-[1.02] active:scale-95 touch-manipulation ${(hiringUrgency[idx] || 'standard') === 'urgent' ? 'bg-amber-500 hover:bg-amber-600' : (hiringUrgency[idx] || 'standard') === 'flexible' ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-blue-600 hover:bg-blue-700'}`}
                                 >
-                                    Hire • {(hiringUrgency[idx] || 'standard')}
+                                    Hire
                                 </button>
                             ) : (
                                 <button
                                     onClick={() => handleBookService(item)}
-                                    className="w-full py-3 bg-emerald-600 text-white hover:bg-emerald-700 rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 transition-all"
+                                    className="w-full py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-1.5 shadow-md shadow-emerald-100 transition-all"
                                 >
-                                    <Truck size={14} /> Book Service
+                                    <Truck size={12} /> Book
                                 </button>
                             )}
                         </div>

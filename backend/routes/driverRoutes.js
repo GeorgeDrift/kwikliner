@@ -15,5 +15,8 @@ router.post('/bids', driverController.bidOnLoad);
 router.post('/jobs/commit', driverController.commitToJob);
 router.post('/jobs/status', driverController.updateShipmentStatus);
 router.get('/trips', driverController.getTrips);
+router.get('/listings', driverController.getListings);
+router.get('/fleet', driverController.getFleet);
+router.post('/jobs/:loadId/trigger-deposit', driverController.triggerDeposit);
 
 module.exports = router;

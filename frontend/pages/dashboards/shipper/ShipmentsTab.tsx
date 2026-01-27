@@ -14,8 +14,7 @@ const ShipmentsTab: React.FC<ShipmentsTabProps> = ({
 }) => {
     const currentData = loadsSubTab === 'Active'
         ? shipmentsData.Active.filter((s: any) =>
-            (s.driver_id || s.assigned_driver_id) &&
-            ['In Transit', 'Approved / Waiting Pick up', 'Waiting for Driver Commitment', 'Pending Deposit', 'Active (Waiting Delivery)', 'Ready for Pickup'].includes(s.status)
+            ['In Transit', 'Approved / Waiting Pick up', 'Waiting for Driver Commitment', 'Pending Deposit', 'Active (Waiting Delivery)', 'Ready for Pickup', 'Handshake'].includes(s.status)
         )
         : (shipmentsData[loadsSubTab] || []);
 

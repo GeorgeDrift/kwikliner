@@ -55,7 +55,7 @@ const DriverRegistration: React.FC<DriverRegistrationProps> = ({ onComplete, onB
     const validateField = (name: string, value: any) => {
         let error = '';
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        const phoneRegex = /^(0|265)\d{9}$/;
+        const phoneRegex = /^0\d{9}$/;
 
         switch (name) {
             case 'email':
@@ -63,8 +63,9 @@ const DriverRegistration: React.FC<DriverRegistrationProps> = ({ onComplete, onB
                 break;
             case 'phone':
             case 'emergencyPhone':
+            case 'accountDetails':
                 const phoneDigits = (value || '').replace(/\D/g, '');
-                if (!phoneRegex.test(phoneDigits)) error = 'Phone must start with 0 or 265 followed by exactly 9 digits';
+                if (!phoneRegex.test(phoneDigits)) error = 'Phone must be exactly 10 digits starting with 0';
                 break;
             case 'password':
                 if (value.length < 6) error = 'Password must be at least 6 characters';
@@ -157,7 +158,17 @@ const DriverRegistration: React.FC<DriverRegistrationProps> = ({ onComplete, onB
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <input placeholder="Phone" maxLength={13} className={`p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none ${errors.phone ? 'ring-2 ring-red-500' : ''}`} value={formData.phone} onChange={e => handleChange('phone', e.target.value)} />
+                                    <input
+                                        type="tel"
+                                        placeholder="Phone (10 digits)"
+                                        maxLength={10}
+                                        className={`p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none ${errors.phone ? 'ring-2 ring-red-500' : ''}`}
+                                        value={formData.phone}
+                                        onChange={e => {
+                                            const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                            handleChange('phone', val);
+                                        }}
+                                    />
                                     {errors.phone && <p className="text-red-500 text-[10px] font-bold mt-1 ml-2">{errors.phone}</p>}
                                 </div>
                                 <div>
@@ -300,7 +311,17 @@ const DriverRegistration: React.FC<DriverRegistrationProps> = ({ onComplete, onB
                             <input placeholder="Name" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.emergencyName} onChange={e => handleChange('emergencyName', e.target.value)} />
                             <input placeholder="Relationship" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.emergencyRel} onChange={e => handleChange('emergencyRel', e.target.value)} />
                             <div className="grid grid-cols-2 gap-4">
-                                <input placeholder="Phone" maxLength={13} className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.emergencyPhone} onChange={e => handleChange('emergencyPhone', e.target.value)} />
+                                <input
+                                    type="tel"
+                                    placeholder="Phone (10 digits)"
+                                    maxLength={10}
+                                    className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none"
+                                    value={formData.emergencyPhone}
+                                    onChange={e => {
+                                        const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                        handleChange('emergencyPhone', val);
+                                    }}
+                                />
                                 <input placeholder="Blood Group (Opt)" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.bloodGroup} onChange={e => handleChange('bloodGroup', e.target.value)} />
                             </div>
                         </div>
@@ -407,11 +428,18 @@ const DriverRegistration: React.FC<DriverRegistrationProps> = ({ onComplete, onB
                             </button>
                         </div>
                         <input
-                            placeholder={formData.paymentMethod === 'Mobile Money' ? "Phone Number" : "Account Number / Details"}
-                            maxLength={13}
+                            type={formData.paymentMethod === 'Mobile Money' ? "tel" : "text"}
+                            placeholder={formData.paymentMethod === 'Mobile Money' ? "Phone Number (10 digits)" : "Account Number / Details"}
+                            maxLength={formData.paymentMethod === 'Mobile Money' ? 10 : 20}
                             className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none"
                             value={formData.accountDetails}
-                            onChange={e => handleChange('accountDetails', e.target.value)}
+                            onChange={e => {
+                                let val = e.target.value;
+                                if (formData.paymentMethod === 'Mobile Money') {
+                                    val = val.replace(/\D/g, '').slice(0, 10);
+                                }
+                                handleChange('accountDetails', val);
+                            }}
                         />
                         <p className="text-center text-xs text-slate-400 dark:text-slate-500 font-medium px-4">
                             Drivers acknowledge that earnings are subject to KwikLiner’s commission and payment processing timelines.

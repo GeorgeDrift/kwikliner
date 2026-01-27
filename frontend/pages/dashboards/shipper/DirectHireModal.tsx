@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Truck, MapPin, Package, CreditCard, Calendar } from 'lucide-react';
+import { X, Truck, MapPin, Package, CreditCard, Calendar, MessageSquare } from 'lucide-react';
 
 interface DirectHireModalProps {
     isOpen: boolean;
@@ -145,8 +145,8 @@ const DirectHireModal: React.FC<DirectHireModalProps> = ({ isOpen, onClose, driv
                         </div>
                     </div>
 
-                    <button type="submit" className="w-full py-4 bg-blue-600 text-white rounded-xl font-black uppercase tracking-widest text-sm shadow-xl shadow-blue-100 hover:scale-[1.02] active:scale-95 transition-all">
-                        Send Request
+                    <button type="submit" className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-2xl shadow-blue-100 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3">
+                        Send Direct Request <MessageSquare size={18} />
                     </button>
                 </form>
             </div>
