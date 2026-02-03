@@ -36,9 +36,8 @@ const init = (server) => {
                     dbId: item.id,
                     name: item.title,
                     // Use specific category from metadata if available (for Hardware), otherwise fallback to DB type
-                    cat: (item.metadata && item.metadata.category) ? item.metadata.category : item.type,
-                    // Fix type mapping to preserve Hardware/Product distinction
-                    type: item.type === 'Cargo' ? 'Shipment' : (item.type === 'Hardware' ? 'Product' : 'Transport'),
+                    cat: item.type,
+                    type: item.type,
                     price: parseFloat(item.price) || 0,
                     priceStr: item.price_str,
                     location: item.location,
@@ -260,7 +259,7 @@ const broadcastMarketUpdate = async () => {
             dbId: item.id,
             name: item.title,
             cat: item.type,
-            type: item.type === 'Cargo' ? 'Shipment' : 'Transport',
+            type: item.type,
             price: parseFloat(item.price) || 0,
             priceStr: item.price_str,
             location: item.location,

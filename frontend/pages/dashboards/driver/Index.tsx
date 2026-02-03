@@ -91,7 +91,7 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ user, onLogout, mobil
 
    const loadData = async () => {
       try {
-         const [allJobs, allTrips, walletData, transData, fleetData, productsData, statsData, publicCargoData] = await Promise.all([
+         const [allJobs, allTrips, walletData, transData, fleetData, productsData, statsData, publicCargoData, allMarketData] = await Promise.all([
             api.getAvailableJobs().catch((err) => { console.error('Error fetching available jobs:', err); return []; }),
             api.getDriverTrips().catch(() => []),
             api.getWallet(user.id).catch(() => ({})),
@@ -99,14 +99,19 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ user, onLogout, mobil
             api.getFleet(user.id).catch(() => []),
             api.getProducts().catch(() => []),
             api.getDriverStats().catch(() => ({})),
-            api.getPublicCargoListings().catch((err) => { console.error('Public cargo fetch error:', err); return []; })
+            api.getPublicCargoListings().catch((err) => { console.error('Public cargo fetch error:', err); return []; }),
+            api.getPublicMarketplaceAll().catch(() => [])
          ]);
 
          console.log('=== Data Loaded ===', {
             publicCargoData: Array.isArray(publicCargoData) ? publicCargoData.length : 'error',
-            allJobs: Array.isArray(allJobs) ? allJobs.length : 'error',
-            allTrips: Array.isArray(allTrips) ? allTrips.length : 'error'
+            allMarketItems: Array.isArray(allMarketData) ? allMarketData.length : 'error',
+            allJobs: Array.isArray(allJobs) ? allJobs.length : 'error'
          });
+
+         if (allMarketData) {
+            setMarketItems(mapMarketData(allMarketData));
+         }
 
          setDbStats(statsData || {});
          setWallet(statsData?.wallet || { balance: 0, currency: 'MWK' });
@@ -154,7 +159,16 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ user, onLogout, mobil
 
       newSocket.on('market_data_update', (data: any[]) => {
          console.log('Socket: Received centralized market update', data.length);
-         setMarketItems(mapMarketData(data));
+         const mapped = mapMarketData(data);
+         setMarketItems(prev => {
+            const fresh = [...prev];
+            mapped.forEach(item => {
+               const idx = fresh.findIndex(i => i.id === item.id);
+               if (idx > -1) fresh[idx] = item;
+               else fresh.push(item);
+            });
+            return fresh;
+         });
       });
 
       return () => {
@@ -460,6 +474,13 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ user, onLogout, mobil
    }, [transactions]);
 
    const activeRevenueData = revenueCycle === 'H1' ? revenueData.slice(0, 6) : revenueData.slice(6, 12);
+   useEffect(() => {
+      console.log('[Dashboard] MarketItems Updated:', {
+         count: marketItems.length,
+         categories: Array.from(new Set(marketItems.map(i => i.cat))),
+         cargoCount: marketItems.filter(i => i.cat === 'Cargo').length
+      });
+   }, [marketItems]);
 
    const renderContent = () => {
       try {
