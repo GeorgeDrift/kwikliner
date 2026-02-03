@@ -9,7 +9,6 @@ import { useToast } from '../components/ToastContext';
 import { api } from '../services/api';
 import { useNavigate, useLocation } from 'react-router-dom';
 import FleetOwnerRegistration from './FleetOwnerRegistration';
-import LoginForm from './Login';
 
 interface DriverRegistrationProps {
     onComplete: (data: any) => void;
