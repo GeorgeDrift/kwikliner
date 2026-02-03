@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import {
     CheckCircle, ChevronRight, ArrowLeft, ArrowRight,
-    Truck, FileText, Shield, Heart, DollarSign, AlertTriangle, BookOpen, Loader2, LogIn
+    Truck, FileText, Shield, Heart, DollarSign, AlertTriangle, BookOpen, Loader2, LogIn,
+    Briefcase, Store, User as UserIcon
 } from 'lucide-react';
 import { UserRole } from '../types';
 import { useToast } from '../components/ToastContext';
 import { api } from '../services/api';
 import { useNavigate, useLocation } from 'react-router-dom';
 import FleetOwnerRegistration from './FleetOwnerRegistration';
-import { Store, User as UserIcon } from 'lucide-react';
+import LoginForm from './Login';
 
 interface DriverRegistrationProps {
     onComplete: (data: any) => void;
