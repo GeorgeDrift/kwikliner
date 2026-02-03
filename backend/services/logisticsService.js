@@ -2,52 +2,65 @@ const pool = require('../db');
 
 const logisticsService = {
     getFleet: async (ownerId) => {
-        const result = await pool.query('SELECT * FROM vehicles WHERE owner_id = $1 ORDER BY created_at DESC', [ownerId]);
+        const result = await pool.query('SELECT * FROM my_fleet WHERE owner_id = $1 ORDER BY created_at DESC', [ownerId]);
         return result.rows;
     },
 
     addVehicle: async (ownerId, vehicleData) => {
-        const { make, model, plate, type, capacity, images, location, operating_range, price } = vehicleData;
+        const { make, model, plate, type, capacity, images, location, price } = vehicleData;
         const result = await pool.query(
-            'INSERT INTO vehicles (owner_id, make, model, plate, type, capacity, images, location, operating_range, price) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *',
-            [ownerId, make, model, plate, type, capacity, images || [], location, operating_range, price]
+            'INSERT INTO my_fleet (owner_id, make, model, plate, type, capacity, images, location, price) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
+            [ownerId, make, model, plate, type, capacity, images || [], location, price]
         );
         return result.rows[0];
     },
 
+    updateVehicle: async (ownerId, vehicleId, vehicleData) => {
+        const { make, model, plate, type, capacity, images, location, price } = vehicleData;
+        const result = await pool.query(
+            'UPDATE my_fleet SET make = $1, model = $2, plate = $3, type = $4, capacity = $5, images = $6, location = $7, price = $8 WHERE id = $9 AND owner_id = $10 RETURNING *',
+            [make, model, plate, type, capacity, images || [], location, price, vehicleId, ownerId]
+        );
+        if (result.rows.length === 0) throw new Error('Vehicle not found or unauthorized');
+        return result.rows[0];
+    },
+
     deleteVehicle: async (ownerId, vehicleId) => {
-        const result = await pool.query('DELETE FROM vehicles WHERE id = $1 AND owner_id = $2 RETURNING *', [vehicleId, ownerId]);
+        const result = await pool.query('DELETE FROM my_fleet WHERE id = $1 AND owner_id = $2 RETURNING *', [vehicleId, ownerId]);
         if (result.rows.length === 0) throw new Error('Vehicle not found or unauthorized');
         return { success: true };
     },
 
     getStats: async (ownerId) => {
-        // 1. Fleet count & Total Capacity
-        const fleetRes = await pool.query(`
-            SELECT COUNT(*) as count,
-            COALESCE(SUM(CAST(NULLIF(REGEXP_REPLACE(capacity, '[^0-9.]', '', 'g'), '') AS FLOAT)), 0) as capacity
-            FROM vehicles WHERE owner_id = $1
-        `, [ownerId]);
+        // Run all queries in parallel using Promise.all for better performance
+        const [fleetRes, bidsRes, activeRes, walletRes, historyRes] = await Promise.all([
+            // 1. Fleet count & Total Capacity
+            pool.query(`
+                SELECT COUNT(*) as count,
+                COALESCE(SUM(CAST(NULLIF(REGEXP_REPLACE(capacity, '[^0-9.]', '', 'g'), '') AS FLOAT)), 0) as capacity
+                FROM my_fleet WHERE owner_id = $1
+            `, [ownerId]),
 
-        // 2. Pending Bids for their trucks
-        const bidsRes = await pool.query(`
-            SELECT COUNT(b.id) as count 
-            FROM bids b
-            JOIN shipments s ON b.load_id = s.id
-            WHERE s.owner_id = $1 AND b.status = 'Pending'
-        `, [ownerId]);
+            // 2. Pending Bids for their trucks
+            pool.query(`
+                SELECT COUNT(b.id) as count 
+                FROM bids b
+                JOIN shipments s ON b.load_id = s.id
+                WHERE s.owner_id = $1 AND b.status = 'Pending'
+            `, [ownerId]),
 
-        // 3. Active shipments
-        const activeRes = await pool.query(`
-            SELECT COUNT(*) as count FROM shipments 
-            WHERE owner_id = $1 AND status NOT IN ('Completed', 'Delivered', 'Rejected', 'Cancelled')
-        `, [ownerId]);
+            // 3. Active shipments
+            pool.query(`
+                SELECT COUNT(*) as count FROM shipments 
+                WHERE owner_id = $1 AND status NOT IN ('Completed', 'Delivered', 'Rejected', 'Cancelled')
+            `, [ownerId]),
 
-        // 4. Wallet
-        const walletRes = await pool.query('SELECT balance, currency FROM wallets WHERE user_id = $1', [ownerId]);
+            // 4. Wallet
+            pool.query('SELECT balance, currency FROM wallets WHERE user_id = $1', [ownerId]),
 
-        // 5. Total History (All time)
-        const historyRes = await pool.query('SELECT COUNT(*) as count FROM shipments WHERE owner_id = $1', [ownerId]);
+            // 5. Total History (All time)
+            pool.query('SELECT COUNT(*) as count FROM shipments WHERE owner_id = $1', [ownerId])
+        ]);
 
         return {
             fleetSize: parseInt(fleetRes.rows[0].count),

@@ -12,16 +12,16 @@ const fetchWithTimeout = (url: string, options: RequestInit = {}, timeout = 1000
 
 export const api = {
   // --- AUTH ---
-  login: async (email: string, password?: string) => {
+  login: async (role: string) => {
     try {
       const res = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ role }),
       });
       return await res.json();
     } catch (e) {
-      return { id: 'offline', email, name: 'Offline User', isVerified: true };
+      return { id: 'offline', role, name: 'Offline User', isVerified: true };
     }
   },
 
@@ -141,32 +141,11 @@ export const api = {
     });
     return res.json();
   },
-  getDriverListings: async () => {
-    const res = await fetchWithTimeout(`${API_URL}/driver/listings`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    });
-    if (!res.ok) throw new Error(`Failed to fetch your listings: ${res.status}`);
-    return res.json();
-  },
-  triggerDepositReminder: async (loadId: string) => {
-    const res = await fetch(`${API_URL}/driver/jobs/${loadId}/trigger-deposit`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    });
-    return res.json();
-  },
 
 
   // --- LOGISTICS ACTIONS ---
-  getDriverFleet: async () => {
-    const res = await fetchWithTimeout(`${API_URL}/driver/fleet`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    });
-    if (!res.ok) throw new Error(`Failed to fetch fleet: ${res.status}`);
-    return res.json();
-  },
-  getFleet: async () => {
-    const res = await fetchWithTimeout(`${API_URL}/logistics/fleet`, {
+  getFleet: async (ownerId: string) => {
+    const res = await fetchWithTimeout(`${API_URL}/logistics/${ownerId}/fleet`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     });
     if (!res.ok) throw new Error(`Failed to fetch fleet: ${res.status}`);
@@ -207,20 +186,6 @@ export const api = {
     });
     return res.json();
   },
-  deleteVehicleListing: async (id: string) => {
-    const res = await fetch(`${API_URL}/logistics/listings/${id}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    });
-    return res.json();
-  },
-  getLogisticsTrips: async () => {
-    const res = await fetchWithTimeout(`${API_URL}/logistics/trips`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    });
-    if (!res.ok) throw new Error(`Failed to fetch trips: ${res.status}`);
-    return res.json();
-  },
   getLogisticsAnalytics: async () => {
     const res = await fetch(`${API_URL}/logistics/analytics`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
@@ -230,6 +195,14 @@ export const api = {
   acceptJob: async (jobId: string, ownerId: string) => {
     // This is for logistics/driver accepting a job
     return { success: true };
+  },
+  deleteVehicleListing: async (id: string) => {
+    const res = await fetch(`${API_URL}/logistics/listings/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    if (!res.ok) throw new Error(`Failed to delete listing: ${res.status}`);
+    return res.json();
   },
 
   // --- TRUCK HIRING FLOW ---
@@ -242,6 +215,14 @@ export const api = {
       },
       body: JSON.stringify(data),
     });
+    return res.json();
+  },
+  deleteDriverListing: async (id: string) => {
+    const res = await fetch(`${API_URL}/driver/listings/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    if (!res.ok) throw new Error(`Failed to delete listing: ${res.status}`);
     return res.json();
   },
 
@@ -404,31 +385,6 @@ export const api = {
     return res.json();
   },
 
-  // --- ADMIN ACTIONS ---
-  getAdminStats: async () => {
-    const res = await fetchWithTimeout(`${API_URL}/admin/stats`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    });
-    if (!res.ok) throw new Error(`Failed to fetch admin stats: ${res.status}`);
-    return res.json();
-  },
-  getAdminUsers: async (search?: string) => {
-    const query = search ? `?search=${search}` : '';
-    const res = await fetchWithTimeout(`${API_URL}/admin/users${query}`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    });
-    if (!res.ok) throw new Error(`Failed to fetch users: ${res.status}`);
-    return res.json();
-  },
-  toggleUserStatus: async (userId: string) => {
-    const res = await fetch(`${API_URL}/admin/users/${userId}/status`, {
-      method: 'PUT',
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    });
-    if (!res.ok) throw new Error(`Failed to toggle status: ${res.status}`);
-    return res.json();
-  },
-
   // --- PUBLIC MARKETPLACE (No Auth Required) ---
   getPublicCargoListings: async () => {
     const res = await fetchWithTimeout(`${API_URL}/marketplace/cargo`);
@@ -450,6 +406,33 @@ export const api = {
   getPublicLogisticsServices: async () => {
     const res = await fetchWithTimeout(`${API_URL}/marketplace/services`);
     if (!res.ok) throw new Error(`Failed to fetch logistics services: ${res.status}`);
+    return res.json();
+  },
+  getPublicMarketplaceAll: async () => {
+    const res = await fetchWithTimeout(`${API_URL}/marketplace/all`);
+    if (!res.ok) throw new Error(`Failed to fetch all marketplace items: ${res.status}`);
+    return res.json();
+  },
+  getAdminStats: async () => {
+    const res = await fetchWithTimeout(`${API_URL}/admin/stats`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    if (!res.ok) throw new Error(`Failed to fetch admin stats: ${res.status}`);
+    return res.json();
+  },
+  getAdminUsers: async (search = '') => {
+    const res = await fetchWithTimeout(`${API_URL}/admin/users?search=${search}`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    if (!res.ok) throw new Error(`Failed to fetch admin users: ${res.status}`);
+    return res.json();
+  },
+  toggleUserStatus: async (userId: string) => {
+    const res = await fetchWithTimeout(`${API_URL}/admin/users/${userId}/toggle-status`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+    if (!res.ok) throw new Error(`Failed to toggle user status: ${res.status}`);
     return res.json();
   },
 };

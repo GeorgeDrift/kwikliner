@@ -65,3 +65,28 @@ export interface Shipment {
   status: ShipmentStatus;
   createdAt: string;
 }
+
+export interface MarketItem {
+  id: string;
+  name: string;
+  cat: string;
+  type: string;
+  price: number;
+  priceStr: string;
+  img: string;
+  images?: string[];
+  location: string;
+  provider: string;
+  details: string;
+  ownerId?: string;
+  weight?: string;
+  pricingType?: 'Direct' | 'Bid' | string;
+  driverId?: string;
+  stock?: number;
+  quantity?: string | number;
+  manufacturer?: string;
+  model?: string;
+  capacity?: string;
+  vehicleType?: string;
+  operatingRange?: string;
+}

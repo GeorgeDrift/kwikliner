@@ -67,6 +67,24 @@ const ensureSchema = async () => {
         ADD COLUMN IF NOT EXISTS operating_range TEXT,
         ADD COLUMN IF NOT EXISTS price NUMERIC;
       `);
+
+      // Create My Fleet Table (Internal Inventory)
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS my_fleet (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          owner_id UUID REFERENCES users(id) ON DELETE CASCADE,
+          make VARCHAR(100) NOT NULL,
+          model VARCHAR(100) NOT NULL,
+          plate VARCHAR(20) UNIQUE,
+          type VARCHAR(50) NOT NULL,
+          capacity VARCHAR(50),
+          status VARCHAR(50) DEFAULT 'Idle',
+          images TEXT[],
+          location VARCHAR(255),
+          price NUMERIC,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
       console.log('Schema verification complete.');
 
     } catch (dbErr) {

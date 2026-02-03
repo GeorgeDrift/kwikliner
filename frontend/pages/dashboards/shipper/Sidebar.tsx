@@ -24,10 +24,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activeMenu, setActiveMenu, menuSectio
     const navigate = useNavigate();
 
     return (
-        <aside className="hidden md:flex w-64 bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800 flex-col p-6 shrink-0 h-[calc(100vh-64px)] sticky top-16 overflow-hidden transition-colors duration-200">
-            <div className="flex items-center justify-between mb-10 shrink-0 px-2 group/logo">
-                <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center h-16 w-44">
-                    <img src={BRANDS.LOGO_KWIKLINER_WIDE} alt="KwikLiner" className="max-h-full max-w-full object-contain" />
+        <aside className="hidden md:flex w-64 bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800 flex-col p-6 shrink-0 h-screen sticky top-0 overflow-hidden transition-colors duration-200">
+            <div className="flex items-center justify-between mb-10 shrink-0 px-2">
+                <div className="bg-white p-2 sm:p-3 rounded-2xl shadow-sm border border-slate-100 flex items-center h-12">
+                    <img src={BRANDS.LOGO_KWIKLINER_WIDE} alt="KwikLiner" className="h-7 w-auto object-contain" />
                 </div>
                 <button
                     onClick={toggleTheme}
@@ -69,7 +69,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeMenu, setActiveMenu, menuSectio
             <div className="pt-10 border-t border-slate-50 dark:border-slate-800 mt-10 shrink-0 uppercase">
                 <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-[32px] flex items-center gap-4 border border-slate-100 dark:border-slate-800 overflow-hidden">
                     <div className="h-12 w-12 rounded-full bg-white dark:bg-slate-700 shadow-sm overflow-hidden shrink-0">
-                        <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`} alt="pfp" className="w-full h-full object-cover" />
+                        <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`} alt="pfp" />
                     </div>
                     <div className="min-w-0">
                         <p className="text-xs font-black text-slate-900 dark:text-slate-100 truncate">{user.name}</p>
@@ -77,7 +77,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeMenu, setActiveMenu, menuSectio
                     </div>
                 </div>
             </div>
-        </aside >
+        </aside>
     );
 };
 

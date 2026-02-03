@@ -1,4 +1,5 @@
 const pool = require('../db');
+const marketplaceService = require('../services/marketplaceService');
 
 const marketplaceController = {
     // Get all available cargo posts (shipper posts looking for drivers)
@@ -78,7 +79,6 @@ const marketplaceController = {
         }
     },
 
-    // Get all available logistics services
     getAllLogisticsServices: async (req, res) => {
         try {
             // For now, return mock data or fetch from services table if it exists
@@ -90,6 +90,18 @@ const marketplaceController = {
         } catch (err) {
             console.error(err);
             res.status(500).json({ error: 'Failed to fetch logistics services' });
+        }
+    },
+
+    // Integrated All Marketplace Items
+    getAllMarketplaceItems: async (req, res) => {
+        try {
+            const items = await marketplaceService.getItems();
+            console.log(`[Market] Unified fetch: ${items.length} items`);
+            res.json(items);
+        } catch (err) {
+            console.error('[Market] Error fetching unified data:', err);
+            res.status(500).json({ error: 'Internal Server Error' });
         }
     }
 };

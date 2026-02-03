@@ -1,254 +1,236 @@
-
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    Search, MapPin, Truck, Filter, Calendar, Package, ArrowRight,
-    ShieldCheck, Star, ShoppingCart, Wrench, Warehouse, HardHat,
-    Briefcase, Fuel, Info, ChevronRight, Gavel
+    Search, Truck, Package, ArrowRight, ShoppingCart,
+    Briefcase, HardHat, Gavel, Loader2, MapPin, Filter, Star, LayoutGrid
 } from 'lucide-react';
-import { User, UserRole } from '../types';
+import { User } from '../types';
+import { api } from '../services/api';
+import { mapMarketData } from '../services/marketUtils';
 
 interface MarketplaceProps {
     user: User | null;
 }
 
+type TabType = 'all' | 'freight' | 'hardware' | 'logistics';
+
 const Marketplace: React.FC<MarketplaceProps> = ({ user }) => {
     const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
+    const [marketFilter, setMarketFilter] = useState('All');
+    const [allData, setAllData] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const featuredLoads = [
-        {
-            id: 'L-552',
-            route: 'Lilongwe → Blantyre',
-            cargo: 'Fertilizer',
-            weight: '20 Tons',
-            vehicle: 'Flatbed',
-            price: 'MWK 450,000',
-            posted: '2h ago',
-            image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&w=400'
-        },
-        {
-            id: 'L-553',
-            route: 'Lusaka → Harare',
-            cargo: 'Mining Equip',
-            weight: '15 Tons',
-            vehicle: 'Lowbed',
-            price: 'USD 1,200',
-            posted: '5h ago',
-            image: 'https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&q=80&w=400'
-        },
-        {
-            id: 'L-554',
-            route: 'Beira → Mutare',
-            cargo: 'Fuel Tanker',
-            weight: '35k Litres',
-            vehicle: 'Tanker',
-            price: 'USD 850',
-            posted: '1d ago',
-            image: 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&q=80&w=400'
-        },
-        {
-            id: 'L-555',
-            route: 'Nairobi → Mombasa',
-            cargo: 'Coffee Beans',
-            weight: '18 Tons',
-            vehicle: 'Box Body',
-            price: 'USD 1,100',
-            posted: '3h ago',
-            image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&q=80&w=400'
-        },
-        {
-            id: 'L-556',
-            route: 'Johannesburg → Gaborone',
-            cargo: 'Electronics',
-            weight: '5 Tons',
-            vehicle: 'Medium Truck',
-            price: 'ZAR 25,000',
-            posted: '10m ago',
-            image: 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?auto=format&fit=crop&q=80&w=400'
-        },
-        {
-            id: 'L-557',
-            route: 'Dar es Salaam → Kigali',
-            cargo: 'Cement Bags',
-            weight: '25 Tons',
-            vehicle: 'Trailer',
-            price: 'USD 2,400',
-            posted: '6h ago',
-            image: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&q=80&w=400'
-        },
-    ];
+    useEffect(() => {
+        const fetchMarketData = async () => {
+            try {
+                const data = await api.getPublicMarketplaceAll();
+                console.log("Marketplace Data loaded:", data);
+                setAllData(data || []);
+            } catch (err) {
+                console.error("Marketplace: Error loading data", err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchMarketData();
+    }, []);
 
-    const toolsAndEquipment = [
-        {
-            name: 'High-Performance GPS Tracker',
-            category: 'Tools',
-            price: 'MWK 45,000',
-            image: 'https://images.unsplash.com/photo-1544006659-f0b21f04cb1d?auto=format&fit=crop&q=80&w=400',
-            description: 'Long battery life with regional coverage.'
-        },
-        {
-            name: 'Heavy-Duty 20-Ton Hydraulic Jack',
-            category: 'Hardware',
-            price: 'MWK 85,000',
-            image: 'https://images.unsplash.com/photo-1635773103130-1845943f6067?auto=format&fit=crop&q=80&w=400',
-            description: 'Essential for heavy-duty truck maintenance.'
-        },
-        {
-            name: 'Truck Spare Parts Kit (Universal)',
-            category: 'Spares',
-            price: 'MWK 120,000',
-            image: 'https://images.unsplash.com/photo-1486006920555-c77dcf18193c?auto=format&fit=crop&q=80&w=400',
-            description: 'Standard filters, belts and light bulbs.'
-        },
-        {
-            name: 'Industrial Wheel Nut Wrench',
-            category: 'Tools',
-            price: 'MWK 32,000',
-            image: 'https://images.unsplash.com/photo-1530124566582-a618bc2615ad?auto=format&fit=crop&q=80&w=400',
-            description: 'High-torque manual wrench for truck hubs.'
-        },
-        {
-            name: 'Engine Diagnostic Scanner V3',
-            category: 'Electronics',
-            price: 'MWK 155,000',
-            image: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&q=80&w=400',
-            description: 'Universal OBD2 scanner for all major truck models.'
-        },
-        {
-            name: 'Reinforced Cargo Support Straps',
-            category: 'Hardware',
-            price: 'MWK 18,500',
-            image: 'https://images.unsplash.com/photo-1580674684081-7617fbf3d745?auto=format&fit=crop&q=80&w=400',
-            description: '5-ton capacity ratcheting tie-down straps.'
-        },
-        {
-            name: 'Emergency Roadside Flare Kit',
-            category: 'Safety',
-            price: 'MWK 25,000',
-            image: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=400',
-            description: 'Highly visible reflective signs and LED flares.'
-        },
-        {
-            name: 'Heavy-Duty Air Compressor',
-            category: 'Tools',
-            price: 'MWK 95,000',
-            image: 'https://images.unsplash.com/photo-1581092162384-8987c1794ed9?auto=format&fit=crop&q=80&w=400',
-            description: 'Portable high-pressure compressor for tire inflation.'
-        },
-        {
-            name: 'Professional Tool Chest (120pcs)',
-            category: 'Hardware',
-            price: 'MWK 210,000',
-            image: 'https://images.unsplash.com/photo-1581147036324-c17ac41dfa6c?auto=format&fit=crop&q=80&w=400',
-            description: 'Complete set of wrenches, sockets, and screwdrivers.'
-        },
-    ];
+    // Map public data to unified format
+    const marketItems = useMemo(() => mapMarketData(allData), [allData]);
+
+    const categories = ['All', 'Hardware', 'Cargo', 'Transport/Logistics', 'Spares', 'Agri', 'Tech', 'Safety'];
+
+    const getItemsByCategory = (category: string) => {
+        return marketItems.filter(i => {
+            const matchesSearch = i.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                i.details?.toLowerCase().includes(searchQuery.toLowerCase());
+            if (!matchesSearch) return false;
+
+            if (category === 'All') return true;
+            if (category === 'Hardware') return i.cat === 'Hardware' || i.cat === 'Hardware Store';
+            return i.cat === category;
+        });
+    };
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+                <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
+            </div>
+        );
+    }
 
     return (
-        <div className="flex flex-col bg-slate-50 dark:bg-slate-900 min-h-screen transition-colors duration-200">
-            {/* Search Header */}
-            <section className="bg-blue-600 dark:bg-blue-800 pt-20 pb-20 px-4 relative overflow-hidden">
-                <div className="max-w-6xl mx-auto text-center relative z-10">
-                    <h1 className="text-4xl md:text-5xl font-black text-white mb-6">Logistics Marketplace</h1>
-                    <div className="max-w-3xl mx-auto bg-white dark:bg-slate-800 p-3 rounded-3xl shadow-2xl flex flex-col md:flex-row gap-2 border border-blue-50 dark:border-slate-700">
-                        <div className="flex-grow flex items-center px-6 py-4">
-                            <Search className="h-6 w-6 text-blue-600 dark:text-blue-400 mr-4" />
-                            <input
-                                type="text"
-                                placeholder="Search freight, tools, or spares..."
-                                className="w-full bg-transparent outline-none text-slate-800 dark:text-slate-100 font-bold placeholder:text-slate-400 text-lg"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                            />
-                        </div>
-                        <button className="bg-blue-600 dark:bg-blue-700 text-white px-10 py-4 rounded-2xl font-black hover:bg-blue-700 transition-all">
-                            Search
+        <div className="min-h-screen bg-slate-50 py-32 px-4 md:px-8">
+            <div className="max-w-7xl mx-auto space-y-10">
+                {/* Header Section */}
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                    <div>
+                        <h3 className="text-4xl font-black text-slate-900 tracking-tighter">Marketplace</h3>
+                        <p className="text-slate-500 font-medium mt-1">Browse the global marketplace. Cargo, Hardware, and Logistics.</p>
+                        {!user && (
+                            <div className="mt-4 flex items-center gap-3">
+                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Want to buy or bid?</span>
+                                <button
+                                    onClick={() => navigate('/login')}
+                                    className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-lg shadow-blue-100"
+                                >
+                                    Log In Now
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                    <div className="relative flex-grow max-w-2xl">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
+                        <input
+                            className="bg-white border border-slate-100 rounded-xl pl-12 pr-6 py-4 text-[11px] font-black uppercase tracking-widest focus:ring-2 focus-within:ring-blue-600 outline-none w-full shadow-lg shadow-slate-100"
+                            placeholder="Search Marketplace..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                </div>
+
+                {/* Category Filters */}
+                <div className="flex flex-wrap gap-4 items-center overflow-x-auto pb-2 scrollbar-hide">
+                    {categories.map(cat => (
+                        <button
+                            key={cat}
+                            onClick={() => setMarketFilter(cat)}
+                            className={`px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${marketFilter === cat ? 'bg-blue-600 text-white shadow-xl shadow-blue-100' : 'bg-white text-slate-400 border border-slate-100 hover:border-blue-600'}`}
+                        >
+                            {cat}
                         </button>
-                    </div>
-                </div>
-            </section>
-
-            {/* Live Freight */}
-            <section className="max-w-[1920px] mx-auto px-4 py-16">
-                <div className="flex items-center justify-between mb-10 bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm">
-                    <h2 className="text-2xl font-black text-slate-900 dark:text-white flex items-center">
-                        <Truck className="mr-3 text-blue-600" /> Live Freight Marketplace
-                    </h2>
-                    <div className="flex gap-4">
-                        <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center">
-                            <span className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span> 42 New Loads
-                        </span>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-                    {featuredLoads.map((load) => (
-                        <div key={load.id} className="bg-white dark:bg-slate-800 rounded-[28px] overflow-hidden shadow-md border border-slate-50 dark:border-slate-700 hover:border-blue-300 transition-all group hover:-translate-y-1">
-                            <div className="h-40 overflow-hidden relative">
-                                <img src={load.image} alt={load.cargo} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                                <div className="absolute top-4 left-4 bg-blue-600 text-white px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.1em]">
-                                    {load.id}
-                                </div>
-                            </div>
-                            <div className="p-5">
-                                <h3 className="font-black text-sm text-slate-900 dark:text-white mb-2 leading-tight line-clamp-1">{load.route}</h3>
-                                <div className="flex flex-wrap gap-2 mb-4">
-                                    <span className="text-[9px] font-black text-slate-500 dark:text-slate-400 flex items-center bg-slate-50 dark:bg-slate-900 px-2 py-1 rounded-lg"><Package className="h-2.5 w-2.5 mr-1.5" /> {load.cargo}</span>
-                                    <span className="text-[9px] font-black text-slate-500 dark:text-slate-400 flex items-center bg-slate-50 dark:bg-slate-900 px-2 py-1 rounded-lg"><Gavel className="h-2.5 w-2.5 mr-1.5 text-blue-500" /> {load.weight}</span>
-                                </div>
-                                <div className="pt-4 border-t border-slate-50 dark:border-slate-700 flex justify-between items-center">
-                                    <div>
-                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Offer</p>
-                                        <span className="text-blue-700 dark:text-blue-400 font-black text-base">{load.price}</span>
-                                    </div>
-                                    <button onClick={() => navigate('/register')} className="h-10 w-10 bg-blue-600 text-white rounded-lg flex items-center justify-center hover:bg-blue-700 transition-all shadow-md shadow-blue-100 dark:shadow-none">
-                                        <ArrowRight className="h-4 w-4" />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
                     ))}
                 </div>
-            </section>
 
-            {/* Tools & Hardware */}
-            <section className="bg-white dark:bg-slate-950 py-24 transition-colors">
-                <div className="max-w-[1920px] mx-auto px-4">
-                    <div className="mb-12">
-                        <h2 className="text-3xl font-black text-slate-900 dark:text-white flex items-center">
-                            <ShoppingCart className="mr-3 text-blue-600" /> Tools & Spares Market
-                        </h2>
-                        <p className="text-slate-500 font-medium mt-2">Buy directly from verified hardware shops.</p>
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-                        {toolsAndEquipment.map((tool, i) => (
-                            <div key={i} className="bg-white dark:bg-slate-900 rounded-[28px] p-2.5 shadow-md border border-slate-100 dark:border-slate-800 hover:shadow-xl transition-all group flex flex-col">
-                                <div className="h-44 rounded-[22px] overflow-hidden mb-4 relative bg-slate-50 dark:bg-slate-950">
-                                    <img src={tool.image} alt={tool.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                                    <div className="absolute bottom-3 left-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl text-[8px] font-black text-blue-600 uppercase tracking-widest">
-                                        {tool.category}
+                {/* Marketplace Grid */}
+                <div className="space-y-16">
+                    {marketFilter === 'All' ? (
+                        <>
+                            {/* Hardware Store Section */}
+                            {getItemsByCategory('Hardware').length > 0 && (
+                                <div className="space-y-6">
+                                    <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+                                        <div className="p-2 bg-blue-600 rounded-lg text-white">
+                                            <ShoppingCart size={18} />
+                                        </div>
+                                        <h4 className="text-2xl font-black text-slate-900 tracking-tighter uppercase">Hardware Store</h4>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                        {getItemsByCategory('Hardware').map((item, idx) => <MarketCard key={idx} item={item} navigate={navigate} />)}
                                     </div>
                                 </div>
-                                <div className="px-3 pb-3 flex-grow flex flex-col justify-between">
-                                    <div>
-                                        <h4 className="font-black text-[13px] text-slate-900 dark:text-white mb-1.5 line-clamp-1 leading-tight">{tool.name}</h4>
-                                        <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold leading-tight mb-4 line-clamp-2">{tool.description}</p>
+                            )}
+
+                            {/* Logistics Section */}
+                            {getItemsByCategory('Transport/Logistics').length > 0 && (
+                                <div className="space-y-6">
+                                    <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+                                        <div className="p-2 bg-emerald-500 rounded-lg text-white">
+                                            <Truck size={18} />
+                                        </div>
+                                        <h4 className="text-2xl font-black text-slate-900 tracking-tighter uppercase">Logistics Units</h4>
                                     </div>
-                                    <div className="flex justify-between items-center pt-4 border-t border-slate-100 dark:border-slate-800">
-                                        <span className="text-sm font-black text-blue-600 dark:text-blue-400">{tool.price}</span>
-                                        <button onClick={() => navigate('/register')} className="bg-blue-600 text-white px-4 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 transition-all flex items-center shadow-sm">
-                                            Buy
-                                        </button>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                        {getItemsByCategory('Transport/Logistics').map((item, idx) => <MarketCard key={idx} item={item} navigate={navigate} />)}
                                     </div>
                                 </div>
+                            )}
+
+                            {/* Cargo Section */}
+                            {getItemsByCategory('Cargo').length > 0 && (
+                                <div className="space-y-6">
+                                    <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+                                        <div className="p-2 bg-amber-500 rounded-lg text-white">
+                                            <Package size={18} />
+                                        </div>
+                                        <h4 className="text-2xl font-black text-slate-900 tracking-tighter uppercase">Available Loads</h4>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                        {getItemsByCategory('Cargo').map((item, idx) => <MarketCard key={idx} item={item} navigate={navigate} />)}
+                                    </div>
+                                </div>
+                            )}
+                        </>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {getItemsByCategory(marketFilter).map((item, idx) => <MarketCard key={idx} item={item} navigate={navigate} />)}
+                        </div>
+                    )}
+
+                    {marketItems.length === 0 && !isLoading && (
+                        <div className="col-span-full py-40 text-center bg-white rounded-[40px] border border-dashed border-slate-200 shadow-sm">
+                            <div className="max-w-xs mx-auto">
+                                <div className="h-20 w-20 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                                    <ShoppingCart className="text-slate-300" size={32} />
+                                </div>
+                                <h3 className="text-xl font-black text-slate-900 mb-2">Marketplace Empty</h3>
+                                <p className="text-slate-500 text-sm font-medium mb-8">We couldn't find any active items in the marketplace right now.</p>
+                                <button
+                                    onClick={() => window.location.reload()}
+                                    className="bg-blue-600 text-white px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-blue-100"
+                                >
+                                    Refresh Marketplace
+                                </button>
                             </div>
-                        ))}
-                    </div>
+                        </div>
+                    )}
+
+                    {marketItems.length > 0 && getItemsByCategory(marketFilter).length === 0 && (
+                        <div className="col-span-full py-20 text-center">
+                            <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">No items found matching your filters.</p>
+                        </div>
+                    )}
                 </div>
-            </section>
+            </div>
         </div>
     );
 };
+
+const MarketCard: React.FC<{ item: any, navigate: any }> = ({ item, navigate }) => (
+    <div className="bg-white rounded-[32px] p-4 border border-slate-50 shadow-sm hover:shadow-2xl transition-all group">
+        <div className="h-48 rounded-[24px] overflow-hidden mb-4 relative bg-slate-100">
+            <img src={item.img} className="w-full h-full object-cover group-hover:scale-110 transition-transform" alt={item.name} />
+            <div className={`absolute top-3 left-3 backdrop-blur-md px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${item.cat === 'Transport/Logistics' ? 'bg-emerald-500/90 text-white' :
+                item.cat === 'Cargo' ? 'bg-amber-500/90 text-white' :
+                    'bg-white/90 text-blue-600'
+                }`}>
+                {item.cat}
+            </div>
+        </div>
+        <div className="px-2 pb-2">
+            <h4 className="font-black text-slate-900 text-sm line-clamp-1 mb-1">{item.name}</h4>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-1.5 line-clamp-1">
+                <MapPin size={10} /> {item.location} • {item.provider}
+            </p>
+            <p className="text-xs text-slate-500 mb-2 line-clamp-2">{item.details}</p>
+
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+                {item.quantity && (
+                    <div className="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                        <Package size={10} /> {item.quantity}
+                    </div>
+                )}
+                {item.weight && (
+                    <div className="bg-amber-50 text-amber-600 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                        <Truck size={10} /> {item.weight}
+                    </div>
+                )}
+            </div>
+
+            <p className="text-xl font-black text-blue-600 mb-4">{item.priceStr}</p>
+
+            <button
+                onClick={() => navigate('/register')}
+                className="w-full py-3 bg-blue-600 text-white hover:bg-black rounded-xl font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-blue-50 transition-all"
+            >
+                {item.cat === 'Cargo' ? <Gavel size={12} /> : item.cat === 'Transport/Logistics' ? <Truck size={12} /> : <ShoppingCart size={12} />}
+                {item.cat === 'Cargo' ? 'Bid on Load' : item.cat === 'Transport/Logistics' ? 'Hire Transporter' : 'Add to Cart'}
+            </button>
+        </div>
+    </div>
+);
 
 export default Marketplace;

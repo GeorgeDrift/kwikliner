@@ -26,8 +26,8 @@ const BoardTab: React.FC<BoardTabProps> = ({
     const marketplaceJobs = jobProposals.filter(j => j.status === 'New' || j.status === 'Bidding Open' || j.status === 'Finding Driver');
 
     const filteredMarketplaceJobs = marketplaceJobs.filter(job => {
-        const matchesFrom = fromLocation === 'All' || job.origin.toLowerCase().includes(fromLocation.toLowerCase());
-        const matchesTo = toLocation === 'All' || job.destination.toLowerCase().includes(toLocation.toLowerCase());
+        const matchesFrom = fromLocation === 'All' || (job.origin || "").toLowerCase().includes(fromLocation.toLowerCase());
+        const matchesTo = toLocation === 'All' || (job.destination || "").toLowerCase().includes(toLocation.toLowerCase());
         return matchesFrom && matchesTo;
     });
 

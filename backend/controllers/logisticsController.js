@@ -20,6 +20,16 @@ const logisticsController = {
         }
     },
 
+    updateVehicle: async (req, res) => {
+        try {
+            const vehicle = await logisticsService.updateVehicle(req.user.id, req.params.vehicleId, req.body);
+            res.json(vehicle);
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ error: 'Failed to update vehicle' });
+        }
+    },
+
     deleteVehicle: async (req, res) => {
         try {
             await logisticsService.deleteVehicle(req.user.id, req.params.vehicleId);

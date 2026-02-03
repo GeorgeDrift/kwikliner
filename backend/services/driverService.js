@@ -138,22 +138,63 @@ const driverService = {
     },
 
     postVehicleListing: async (driverId, data) => {
-        const { driverName, vehicleType, capacity, route, price, images, location, manufacturer, model, operating_range } = data;
+        const { driverName, vehicleType, capacity, route, price, images, location, manufacturer, model, fleetId } = data;
+
+        console.log(`[DriverService] Creating listing for ${driverName}, fleetId: ${fleetId}`);
+        console.log(`[DriverService] Images provided: ${Array.isArray(images) ? images.length : 'none'}`);
 
         // 1. Save the listing
         const result = await pool.query(`
             INSERT INTO vehicle_listings 
-            (driver_id, driver_name, vehicle_type, capacity, route, price, images, location, manufacturer, model, operating_range)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            (driver_id, driver_name, vehicle_type, capacity, route, price, images, location, manufacturer, model)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             RETURNING *
-        `, [driverId, driverName, vehicleType, capacity, route, price, images, location, manufacturer, model, operating_range]);
+        `, [driverId, driverName, vehicleType, capacity, route, price, images, location, manufacturer, model]);
 
         const listing = result.rows[0];
+
+        // 2. Sync with Fleet if provided
+        if (fleetId) {
+            console.log(`[DriverService] Syncing with fleet vehicle: ${fleetId}`);
+            try {
+                const fleetUpdate = await pool.query(
+                    'UPDATE my_fleet SET status = $1, images = $2 WHERE id = $3 RETURNING *',
+                    ['Available', images || [], fleetId]
+                );
+                console.log(`[DriverService] Fleet sync result rows: ${fleetUpdate.rows.length}`);
+            } catch (syncErr) {
+                console.error(`[DriverService] Fleet sync FAILED:`, syncErr);
+            }
+        }
 
         // 3. SYNC WITH MARKETPLACE
         await marketplaceService.syncVehicle(listing);
 
         // 4. BROADCAST TO ALL CLIENTS
+        const { broadcastMarketUpdate } = require('../socket');
+        broadcastMarketUpdate();
+
+        return listing;
+    },
+
+    updateVehicleListing: async (listingId, data) => {
+        const { vehicleType, capacity, route, price, images, location, manufacturer, model } = data;
+
+        const result = await pool.query(`
+            UPDATE vehicle_listings 
+            SET vehicle_type = $1, capacity = $2, route = $3, price = $4, images = $5, 
+                location = $6, manufacturer = $7, model = $8
+            WHERE id = $9
+            RETURNING *
+        `, [vehicleType, capacity, route, price, images, location, manufacturer, model, listingId]);
+
+        if (result.rows.length === 0) throw new Error('Listing not found');
+        const listing = result.rows[0];
+
+        // Sync with marketplace
+        await marketplaceService.syncVehicle(listing);
+
+        // Broadcast
         const { broadcastMarketUpdate } = require('../socket');
         broadcastMarketUpdate();
 
@@ -178,7 +219,7 @@ const driverService = {
         const fleetRes = await pool.query(`
             SELECT COUNT(*) as count, 
             COALESCE(SUM(CAST(NULLIF(REGEXP_REPLACE(capacity, '[^0-9.]', '', 'g'), '') AS FLOAT)), 0) as capacity 
-            FROM vehicles WHERE owner_id = $1
+            FROM my_fleet WHERE owner_id = $1
         `, [driverId]);
 
         // 4. Market Jobs Count (Aligned with centralized marketplace)
@@ -215,8 +256,24 @@ const driverService = {
         return result.rows;
     },
     getFleet: async (ownerId) => {
-        const result = await pool.query('SELECT * FROM vehicles WHERE owner_id = $1 ORDER BY created_at DESC', [ownerId]);
+        const result = await pool.query('SELECT * FROM my_fleet WHERE owner_id = $1 ORDER BY created_at DESC', [ownerId]);
         return result.rows;
+    },
+    deleteVehicleListing: async (listingId, driverId) => {
+        const result = await pool.query(
+            'DELETE FROM vehicle_listings WHERE id = $1 AND driver_id = $2 RETURNING *',
+            [listingId, driverId]
+        );
+        if (result.rows.length === 0) throw new Error('Listing not found or access denied');
+
+        // Remove from marketplace
+        await marketplaceService.removeItem(listingId);
+
+        // Broadcast
+        const { broadcastMarketUpdate } = require('../socket');
+        broadcastMarketUpdate();
+
+        return result.rows[0];
     },
     triggerDepositReminder: async (loadId) => {
         const result = await pool.query('SELECT shipper_id, route, cargo FROM shipments WHERE id = $1', [loadId]);

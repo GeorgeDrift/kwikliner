@@ -2,7 +2,6 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Briefcase, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../../../components/ThemeContext';
-import { BRANDS } from '../../../constants/branding';
 
 interface SidebarProps {
     activeMenu: string;
@@ -16,10 +15,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activeMenu, setActiveMenu, menuSectio
     const navigate = useNavigate();
 
     return (
-        <aside className="hidden md:flex w-64 bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800 flex-col p-6 shrink-0 h-[calc(100vh-64px)] sticky top-16 transition-colors duration-200">
-            <div className="flex items-center justify-between mb-10 px-2 group/logo shrink-0">
-                <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center h-16 w-44">
-                    <img src={BRANDS.LOGO_KWIKLINER_WIDE} alt="KwikLiner" className="max-h-full max-w-full object-contain" />
+        <aside className="hidden md:flex w-64 bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800 flex-col p-6 shrink-0 h-screen sticky top-0 transition-colors duration-200">
+            <div className="flex items-center justify-between mb-10 px-2">
+                <div className="bg-[#6366F1] p-2 rounded-xl shadow-lg shadow-indigo-100 dark:shadow-none">
+                    <Briefcase className="text-white" size={24} />
                 </div>
                 <button
                     onClick={toggleTheme}
@@ -63,7 +62,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeMenu, setActiveMenu, menuSectio
                     </div>
                 ))}
             </div>
-        </aside >
+        </aside>
     );
 };
 

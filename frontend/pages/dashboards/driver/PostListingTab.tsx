@@ -1,15 +1,19 @@
 import React, { useState, useRef } from 'react';
-import { ImageIcon, Plus, Zap, MapPin, Globe, Truck, X } from 'lucide-react';
+import { ImageIcon, Plus, Zap, MapPin, Globe, Truck, X, Trash2 } from 'lucide-react';
 import { fileToBase64 } from '../../../services/fileUtils';
 import VehicleSlider from '../../../components/VehicleSlider';
 import { useToast } from '../../../components/ToastContext';
+import ConfirmModal from '../../../components/ConfirmModal';
 
 interface PostListingTabProps {
     handlePostAvailability: (data: any) => void;
     myListings?: any[];
+    handleDeleteListing?: (id: string) => void;
 }
-const PostListingTab: React.FC<PostListingTabProps> = ({ handlePostAvailability, myListings = [] }) => {
+const PostListingTab: React.FC<PostListingTabProps> = ({ handlePostAvailability, myListings = [], handleDeleteListing }) => {
     const { addToast } = useToast();
+    const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<string | null>(null);
     const fileInputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
     const [isUploading, setIsUploading] = useState(false);
     const [formData, setFormData] = useState({
@@ -206,11 +210,34 @@ const PostListingTab: React.FC<PostListingTabProps> = ({ handlePostAvailability,
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{listing.vehicle_type} • {listing.capacity}</p>
                                     <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 mt-2 uppercase">{listing.location || listing.route}</p>
                                 </div>
+                                <button
+                                    onClick={() => {
+                                        setItemToDelete(listing.id);
+                                        setIsDeleteConfirmOpen(true);
+                                    }}
+                                    className="ml-auto p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-2xl hover:bg-red-100 dark:hover:bg-red-900/40 transition-all active:scale-95"
+                                >
+                                    <Trash2 size={18} />
+                                </button>
                             </div>
                         ))}
                     </div>
                 </div>
             )}
+            <ConfirmModal
+                isOpen={isDeleteConfirmOpen}
+                onClose={() => setIsDeleteConfirmOpen(false)}
+                onConfirm={async () => {
+                    if (itemToDelete && handleDeleteListing) {
+                        await handleDeleteListing(itemToDelete);
+                        addToast('Listing removed successfully', 'success');
+                    }
+                }}
+                title="Remove Listing"
+                message="Are you sure you want to remove this listing? It will no longer be visible to shippers."
+                confirmText="Remove Now"
+                type="danger"
+            />
         </div>
     );
 };

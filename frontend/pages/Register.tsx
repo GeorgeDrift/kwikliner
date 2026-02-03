@@ -1,5 +1,6 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
     CheckCircle, ChevronRight, ArrowLeft, ArrowRight,
     User, Truck, FileText, Shield, Heart, DollarSign, AlertTriangle, BookOpen, Loader2, Briefcase, Store
@@ -7,7 +8,8 @@ import {
 import { UserRole } from '../types';
 import { useToast } from '../components/ToastContext';
 import { api } from '../services/api';
-import { useNavigate } from 'react-router-dom';
+import { api } from '../services/api';
+import { useNavigate, useLocation } from 'react-router-dom';
 import FleetOwnerRegistration from './FleetOwnerRegistration';
 
 interface DriverRegistrationProps {
@@ -656,6 +658,17 @@ const Register: React.FC<{ onRegister: (user: any) => void }> = ({ onRegister })
     const [isLoading, setIsLoading] = useState(false);
     const { addToast } = useToast();
     const navigate = useNavigate();
+    const location = useLocation();
+
+    useEffect(() => {
+        const state = location.state as { role?: UserRole };
+        if (state?.role) {
+            if (state.role === UserRole.SHIPPER) setMode('reg-shipper');
+            else if (state.role === UserRole.DRIVER) setMode('reg-driver');
+            else if (state.role === UserRole.LOGISTICS_OWNER) setMode('reg-fleet');
+            else if (state.role === UserRole.HARDWARE_OWNER) setMode('reg-hardware');
+        }
+    }, [location.state]);
 
     const handleRegistrationComplete = async (userData: any) => {
         setIsLoading(true);

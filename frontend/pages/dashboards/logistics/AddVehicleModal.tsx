@@ -1,6 +1,8 @@
-
 import React, { useState, useRef } from 'react';
 import { X, ImageIcon, Plus } from 'lucide-react';
+import { fileToBase64 } from '../../../services/fileUtils';
+import { useToast } from '../../../components/ToastContext';
+
 
 interface AddVehicleModalProps {
     isOpen: boolean;
@@ -8,7 +10,8 @@ interface AddVehicleModalProps {
     handleAddVehicle: (e: React.FormEvent, images: string[]) => void;
     newVehicle: any;
     setNewVehicle: (vehicle: any) => void;
-    handleImageUpload: (e: React.ChangeEvent<HTMLInputElement>, index: number) => Promise<string | null>;
+    // handleImageUpload removed as we handle it internally now
+    isEditing?: boolean;
 }
 
 const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
@@ -17,23 +20,35 @@ const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
     handleAddVehicle,
     newVehicle,
     setNewVehicle,
-    handleImageUpload
+    isEditing
 }) => {
-    const [images, setImages] = useState<string[]>(['', '', '']);
+    const { addToast } = useToast();
+    const [images, setImages] = useState<string[]>(
+        isEditing && newVehicle.images && newVehicle.images.length > 0
+            ? (newVehicle.images.length >= 3 ? newVehicle.images.slice(0, 3) : [...newVehicle.images, ...Array(3 - newVehicle.images.length).fill('')])
+            : (isEditing && newVehicle.image ? [newVehicle.image, '', ''] : ['', '', ''])
+    );
     const fileInputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
     const [isUploading, setIsUploading] = useState(false);
 
     if (!isOpen) return null;
 
     const onFileChange = async (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
-        setIsUploading(true);
-        const base64 = await handleImageUpload(e, index);
-        if (base64) {
-            const newImgs = [...images];
-            newImgs[index] = base64;
-            setImages(newImgs);
+        const file = e.target.files?.[0];
+        if (file) {
+            try {
+                setIsUploading(true);
+                const base64 = await fileToBase64(file);
+                const newImgs = [...images];
+                newImgs[index] = base64;
+                setImages(newImgs);
+            } catch (error) {
+                console.error('Image upload failed', error);
+                addToast('Failed to process image', 'error');
+            } finally {
+                setIsUploading(false);
+            }
         }
-        setIsUploading(false);
     };
 
     const removeImage = (index: number, e: React.MouseEvent) => {
@@ -56,8 +71,8 @@ const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
             <div className="bg-white dark:bg-slate-800 rounded-[32px] sm:rounded-[40px] p-6 sm:p-10 w-full max-w-3xl relative z-10 animate-in zoom-in-95 duration-300 shadow-2xl overflow-y-auto max-h-[90vh] scrollbar-hide">
                 <div className="flex justify-between items-center mb-8">
                     <div>
-                        <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">Add New Vehicle</h3>
-                        <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">Add a truck to your managed fleet roster.</p>
+                        <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">{isEditing ? 'Edit Vehicle' : 'Add New Vehicle'}</h3>
+                        <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">{isEditing ? 'Update your fleet vehicle details.' : 'Add a truck to your managed fleet roster.'}</p>
                     </div>
                     <button onClick={onClose} className="h-10 w-10 sm:h-12 sm:w-12 bg-slate-50 dark:bg-slate-900 rounded-full flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-colors">
                         <X size={20} className="sm:size-[24px]" />
@@ -153,41 +168,16 @@ const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
                                 className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-[#6366F1] dark:text-white transition-all"
                             />
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Operating Range</label>
-                            <input
-                                required
-                                value={newVehicle.operating_range}
-                                onChange={e => setNewVehicle({ ...newVehicle, operating_range: e.target.value })}
-                                placeholder="e.g. Across the country"
-                                className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-[#6366F1] dark:text-white transition-all"
-                            />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <label className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Capacity</label>
-                                <input
-                                    required
-                                    value={newVehicle.capacity}
-                                    onChange={e => setNewVehicle({ ...newVehicle, capacity: e.target.value })}
-                                    placeholder="e.g. 30T"
-                                    className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-[#6366F1] dark:text-white transition-all"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Type</label>
-                                <select
-                                    value={newVehicle.type}
-                                    onChange={e => setNewVehicle({ ...newVehicle, type: e.target.value })}
-                                    className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-[#6366F1] dark:text-white transition-all appearance-none"
-                                >
-                                    <option value="Flatbed">Flatbed</option>
-                                    <option value="Tanker">Tanker</option>
-                                    <option value="Box Body">Box Body</option>
-                                    <option value="Refrigerated">Refrigerated</option>
-                                </select>
-                            </div>
-                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Capacity</label>
+                        <input
+                            required
+                            value={newVehicle.capacity}
+                            onChange={e => setNewVehicle({ ...newVehicle, capacity: e.target.value })}
+                            placeholder="e.g. 30T"
+                            className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-[#6366F1] dark:text-white transition-all"
+                        />
                     </div>
 
                     <div className="pt-6 border-t border-slate-50 dark:border-slate-700">
@@ -196,7 +186,7 @@ const AddVehicleModal: React.FC<AddVehicleModalProps> = ({
                             disabled={isUploading}
                             className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest shadow-xl transition-all flex items-center justify-center gap-3 ${isUploading ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-indigo-600 text-white hover:scale-[1.02] active:scale-95 shadow-indigo-100'}`}
                         >
-                            {isUploading ? 'Uploading Photos...' : 'Add to Fleet'}
+                            {isUploading ? 'Uploading Photos...' : isEditing ? 'Save Changes' : 'Add to Fleet'}
                         </button>
                     </div>
                 </form>

@@ -10,9 +10,10 @@ interface PostAvailabilityModalProps {
     onSuccess: () => void;
     postVehicleAvailability: (data: any) => Promise<any>;
     initialData?: any;
+    fleet?: any[];
 }
 
-const PostAvailabilityModal: React.FC<PostAvailabilityModalProps> = ({ isOpen, onClose, user, onSuccess, postVehicleAvailability, initialData }) => {
+const PostAvailabilityModal: React.FC<PostAvailabilityModalProps> = ({ isOpen, onClose, user, onSuccess, postVehicleAvailability, initialData, fleet = [] }) => {
     const { addToast } = useToast();
     const fileInputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
     const [isUploading, setIsUploading] = useState(false);
@@ -23,16 +24,50 @@ const PostAvailabilityModal: React.FC<PostAvailabilityModalProps> = ({ isOpen, o
         capacity: '',
         price: '',
         location: '',
-        operatingRange: '',
         images: ['', '', ''] as string[]
     };
     const [formData, setFormData] = useState(defaultFormData);
 
     useEffect(() => {
         if (isOpen) {
-            setFormData(initialData ? { ...defaultFormData, ...initialData } : defaultFormData);
+            if (initialData) {
+                setFormData({
+                    ...defaultFormData,
+                    manufacturer: initialData.make || initialData.manufacturer || '',
+                    model: initialData.model || '',
+                    vehicleType: initialData.type || initialData.vehicleType || initialData.vehicle_type || '',
+                    capacity: initialData.capacity || '',
+                    price: initialData.price || '',
+                    location: initialData.location || '',
+                    images: Array.isArray(initialData.images) && initialData.images.length > 0
+                        ? (initialData.images.length >= 3 ? initialData.images.slice(0, 3) : [...initialData.images, ...new Array(3 - initialData.images.length).fill('')])
+                        : (initialData.img ? [initialData.img, '', ''] : (initialData.image ? [initialData.image, '', ''] : ['', '', '']))
+                });
+            } else {
+                setFormData(defaultFormData);
+            }
+        } else {
+            setFormData(defaultFormData);
         }
-    }, [isOpen]);
+    }, [isOpen, initialData]);
+
+    const [selectedFleetId, setSelectedFleetId] = useState<string | null>(null);
+
+    const handleSelectFromFleet = (vehicle: any) => {
+        setFormData({
+            ...formData,
+            manufacturer: vehicle.make,
+            model: vehicle.model,
+            vehicleType: vehicle.type,
+            capacity: vehicle.capacity,
+            location: vehicle.location || '',
+            images: Array.isArray(vehicle.images) && vehicle.images.length > 0
+                ? (vehicle.images.length >= 3 ? vehicle.images.slice(0, 3) : [...vehicle.images, ...new Array(3 - vehicle.images.length).fill('')])
+                : (vehicle.image ? [vehicle.image, '', ''] : ['', '', ''])
+        });
+        setSelectedFleetId(vehicle.id);
+        addToast(`Imported ${vehicle.make} ${vehicle.model} from fleet`, 'success');
+    };
 
     if (!isOpen) return null;
 
@@ -76,8 +111,8 @@ const PostAvailabilityModal: React.FC<PostAvailabilityModalProps> = ({ isOpen, o
                 location: formData.location,
                 manufacturer: formData.manufacturer,
                 model: formData.model,
-                operatingRange: formData.operatingRange,
-                images: formData.images.filter(img => img !== '')
+                images: formData.images.filter(img => img !== ''),
+                fleetId: (initialData && initialData.id) ? initialData.id : selectedFleetId
             };
             await postVehicleAvailability(postData);
             addToast('Listing published successfully!', 'success');
@@ -103,6 +138,25 @@ const PostAvailabilityModal: React.FC<PostAvailabilityModalProps> = ({ isOpen, o
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-8">
+                    {fleet.length > 0 && !initialData && (
+                        <div className="p-6 bg-indigo-50 dark:bg-indigo-900/20 rounded-[32px] border border-indigo-100 dark:border-indigo-800/50">
+                            <label className="text-[11px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest ml-1 mb-4 block">Quick Select From Your Fleet</label>
+                            <div className="flex flex-wrap gap-2">
+                                {fleet.map((v: any) => (
+                                    <button
+                                        key={v.id}
+                                        type="button"
+                                        onClick={() => handleSelectFromFleet(v)}
+                                        className="px-4 py-2 bg-white dark:bg-slate-900 rounded-xl text-xs font-bold border border-indigo-100 dark:border-indigo-800 hover:border-indigo-600 transition-all flex items-center gap-2"
+                                    >
+                                        <Truck size={14} className="text-indigo-600" />
+                                        {v.make} {v.model}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <label className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Manufacturer</label>
@@ -164,16 +218,7 @@ const PostAvailabilityModal: React.FC<PostAvailabilityModalProps> = ({ isOpen, o
                                 className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-indigo-600 transition-all dark:text-white"
                             />
                         </div>
-                        <div className="space-y-2 md:col-span-2">
-                            <label className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Operating Range</label>
-                            <input
-                                required
-                                value={formData.operatingRange}
-                                onChange={e => setFormData({ ...formData, operatingRange: e.target.value })}
-                                placeholder="e.g. Southern & Central Regions"
-                                className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-indigo-600 transition-all dark:text-white"
-                            />
-                        </div>
+
                     </div>
 
                     {/* Image Gallery */}

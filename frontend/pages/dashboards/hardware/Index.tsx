@@ -17,6 +17,8 @@ import { api } from '../../../services/api';
 import { fileToBase64 } from '../../../services/fileUtils';
 import { BRANDS } from '../../../constants/branding';
 import { io } from 'socket.io-client';
+import { mapMarketData } from '../../../services/marketUtils';
+import ConfirmModal from '../../../components/ConfirmModal';
 
 interface HardwareOwnerDashboardProps {
   user: User;
@@ -41,6 +43,8 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
   // Modal States
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any | null>(null);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
   // Cart States
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -99,7 +103,7 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
 
     newSocket.on('market_data_update', (data: any[]) => {
       console.log('Hardware Socket: Received unified market data', data.length);
-      setAllProducts(data);
+      setAllProducts(mapMarketData(data));
     });
 
     return () => {
@@ -107,10 +111,16 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
     };
   }, [user.id]);
 
-  const deleteItem = async (id: string) => {
-    if (window.confirm('Are you sure you want to remove this item from your inventory?')) {
-      await api.deleteProduct(id);
+  const deleteItem = (id: string) => {
+    setItemToDelete(id);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (itemToDelete) {
+      await api.deleteProduct(itemToDelete);
       loadProducts();
+      setItemToDelete(null);
     }
   };
 
@@ -837,59 +847,61 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
       </aside>
 
       {/* MOBILE SIDEBAR (Drawer) */}
-      {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-[200] md:hidden">
-          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsMobileMenuOpen(false)}></div>
-          <aside className="absolute left-0 top-0 bottom-0 w-80 bg-white dark:bg-slate-900 flex flex-col p-8 animate-in slide-in-from-left duration-300 shadow-2xl">
-            <div className="flex items-center justify-between mb-10 shrink-0">
-              <div className="bg-white p-2 sm:p-3 rounded-2xl shadow-sm border border-slate-100 flex items-center h-12">
-                <img src={BRANDS.LOGO_KWIKLINER_WIDE} alt="KwikLiner" className="h-7 w-auto object-contain" />
+      {
+        isMobileMenuOpen && (
+          <div className="fixed inset-0 z-[200] md:hidden">
+            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsMobileMenuOpen(false)}></div>
+            <aside className="absolute left-0 top-0 bottom-0 w-80 bg-white dark:bg-slate-900 flex flex-col p-8 animate-in slide-in-from-left duration-300 shadow-2xl">
+              <div className="flex items-center justify-between mb-10 shrink-0">
+                <div className="bg-white p-2 sm:p-3 rounded-2xl shadow-sm border border-slate-100 flex items-center h-12">
+                  <img src={BRANDS.LOGO_KWIKLINER_WIDE} alt="KwikLiner" className="h-7 w-auto object-contain" />
+                </div>
+                <button onClick={() => setIsMobileMenuOpen(false)} className="h-10 w-10 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-400 dark:text-slate-500">
+                  <X size={20} />
+                </button>
               </div>
-              <button onClick={() => setIsMobileMenuOpen(false)} className="h-10 w-10 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-400 dark:text-slate-500">
-                <X size={20} />
-              </button>
-            </div>
 
-            <div className="flex-grow space-y-10 overflow-y-auto pr-2 scrollbar-hide">
-              {Object.entries(menuSections).map(([title, items]) => (
-                <div key={title}>
-                  <p className="text-[11px] font-black text-slate-300 uppercase tracking-[0.25em] mb-6 px-4">{title.replace('_', ' ')}</p>
-                  <div className="space-y-2">
-                    {items.map(item => (
-                      <button
-                        key={item.id}
-                        onClick={() => {
-                          if (item.id === 'Logout') navigate('/');
-                          else {
-                            setActiveMenu(item.id);
-                            setIsMobileMenuOpen(false);
-                          }
-                        }}
-                        className={`w-full flex items-center justify-between px-6 py-5 rounded-[24px] transition-all group ${activeMenu === item.id ? 'bg-[#6366F1] text-white shadow-2xl shadow-indigo-200' : 'text-slate-500 hover:bg-slate-50'}`}
-                      >
-                        <div className="flex items-center space-x-5">
-                          <span className={activeMenu === item.id ? 'text-white' : 'text-slate-400 group-hover:text-[#6366F1] transition-colors'}>{item.icon}</span>
-                          <span className="text-sm font-black tracking-tight">{item.label}</span>
-                        </div>
-                      </button>
-                    ))}
+              <div className="flex-grow space-y-10 overflow-y-auto pr-2 scrollbar-hide">
+                {Object.entries(menuSections).map(([title, items]) => (
+                  <div key={title}>
+                    <p className="text-[11px] font-black text-slate-300 uppercase tracking-[0.25em] mb-6 px-4">{title.replace('_', ' ')}</p>
+                    <div className="space-y-2">
+                      {items.map(item => (
+                        <button
+                          key={item.id}
+                          onClick={() => {
+                            if (item.id === 'Logout') navigate('/');
+                            else {
+                              setActiveMenu(item.id);
+                              setIsMobileMenuOpen(false);
+                            }
+                          }}
+                          className={`w-full flex items-center justify-between px-6 py-5 rounded-[24px] transition-all group ${activeMenu === item.id ? 'bg-[#6366F1] text-white shadow-2xl shadow-indigo-200' : 'text-slate-500 hover:bg-slate-50'}`}
+                        >
+                          <div className="flex items-center space-x-5">
+                            <span className={activeMenu === item.id ? 'text-white' : 'text-slate-400 group-hover:text-[#6366F1] transition-colors'}>{item.icon}</span>
+                            <span className="text-sm font-black tracking-tight">{item.label}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-8 border-t border-slate-50 dark:border-slate-800 mt-8 shrink-0">
+                <div className="bg-slate-50 dark:bg-slate-800 p-6 rounded-[32px] flex items-center gap-4 border border-slate-100 dark:border-slate-700 overflow-hidden">
+                  <div className="h-12 w-12 rounded-full bg-white dark:bg-slate-900 shadow-sm overflow-hidden shrink-0"><img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`} alt="pfp" /></div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-black text-slate-900 dark:text-white truncate">{user.name}</p>
+                    <p className="text-[11px] font-bold text-indigo-400 uppercase tracking-widest mt-0.5">Merchant</p>
                   </div>
                 </div>
-              ))}
-            </div>
-
-            <div className="pt-8 border-t border-slate-50 dark:border-slate-800 mt-8 shrink-0">
-              <div className="bg-slate-50 dark:bg-slate-800 p-6 rounded-[32px] flex items-center gap-4 border border-slate-100 dark:border-slate-700 overflow-hidden">
-                <div className="h-12 w-12 rounded-full bg-white dark:bg-slate-900 shadow-sm overflow-hidden shrink-0"><img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`} alt="pfp" /></div>
-                <div className="min-w-0">
-                  <p className="text-xs font-black text-slate-900 dark:text-white truncate">{user.name}</p>
-                  <p className="text-[11px] font-bold text-indigo-400 uppercase tracking-widest mt-0.5">Merchant</p>
-                </div>
               </div>
-            </div>
-          </aside>
-        </div>
-      )}
+            </aside>
+          </div>
+        )
+      }
 
       <main className="flex-grow flex flex-col min-w-0 h-screen overflow-y-auto p-4 md:p-10 lg:p-14 md:pt-16 relative">
         {renderContent()}
@@ -1133,9 +1145,18 @@ const HardwareOwnerDashboard: React.FC<HardwareOwnerDashboardProps> = ({ user, o
           </div>
         )}
 
+        <ConfirmModal
+          isOpen={isDeleteConfirmOpen}
+          onClose={() => setIsDeleteConfirmOpen(false)}
+          onConfirm={handleConfirmDelete}
+          title="Remove Product"
+          message="Are you sure you want to delete this product? This action cannot be undone and it will be removed from the Kwik Shop."
+          confirmText="Delete Product"
+          type="danger"
+        />
         <ChatWidget user={user} />
       </main>
-    </div>
+    </div >
   );
 };
 

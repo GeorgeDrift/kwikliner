@@ -28,7 +28,7 @@ const Login: React.FC<LoginProps> = ({ onRegister, onRegisterClick }) => {
         setError('');
 
         try {
-            const response = await api.login(email, password);
+            const response = await api.loginWithEmail(email, password);
             if (response && response.token) {
                 localStorage.setItem('token', response.token);
                 onRegister(response.user);

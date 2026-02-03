@@ -11,6 +11,7 @@ router.use(driverMiddleware);
 router.get('/stats', driverController.getStats);
 router.get('/jobs', driverController.getJobs);
 router.post('/availability', driverController.postVehicleListing);
+router.put('/availability/:listingId', driverController.updateVehicleListing);
 router.post('/bids', driverController.bidOnLoad);
 router.post('/jobs/commit', driverController.commitToJob);
 router.post('/jobs/status', driverController.updateShipmentStatus);
@@ -18,5 +19,6 @@ router.get('/trips', driverController.getTrips);
 router.get('/listings', driverController.getListings);
 router.get('/fleet', driverController.getFleet);
 router.post('/jobs/:loadId/trigger-deposit', driverController.triggerDeposit);
+router.delete('/listings/:id', driverController.deleteVehicleListing);
 
 module.exports = router;

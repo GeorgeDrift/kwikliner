@@ -1,26 +1,7 @@
 import React from 'react';
 import { Search, ShoppingCart, Truck, Package, Gavel, CheckCircle2, User as UserIcon, MapPin, Edit } from 'lucide-react';
 import VehicleSlider from './VehicleSlider';
-
-export interface MarketItem {
-    id: string;
-    name: string;
-    cat: string;
-    type: string;
-    price: number;
-    priceStr: string;
-    img: string;
-    images?: string[];
-    location: string;
-    provider: string;
-    details: string;
-    ownerId?: string;
-    weight?: string;
-    pricingType?: 'Direct' | 'Bid' | string;
-    driverId?: string;
-    stock?: number;
-    quantity?: string | number;
-}
+import { MarketItem } from '../types';
 
 interface MarketTabProps {
     setIsCartOpen: (open: boolean) => void;
@@ -192,7 +173,7 @@ const MarketTab: React.FC<MarketTabProps> = ({
                                 ) : item.cat === 'Cargo' ? (
                                     <button
                                         onClick={() => handleAcceptJob && handleAcceptJob(item)}
-                                        className={`w-full py-1.5 text-white rounded-lg font-black text-[10px] uppercase tracking-wider shadow-md transition-all hover:scale-[1.02] active:scale-95 touch-manipulation flex items-center justify-center gap-2 ${item.priceStr === 'Open to Bids' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+                                        className={`w-full py-2.5 text-white rounded-lg font-black text-[10px] uppercase tracking-wider shadow-md transition-all hover:scale-[1.02] active:scale-95 touch-manipulation ${item.priceStr === 'Open to Bids' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
                                     >
                                         <Gavel size={12} /> {item.priceStr === 'Open to Bids' ? 'Submit Bid' : 'Accept Job'}
                                     </button>

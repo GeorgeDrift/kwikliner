@@ -4,15 +4,19 @@ import { User } from '../../../types';
 import { api } from '../../../services/api';
 import PostAvailabilityModal from './PostAvailabilityModal';
 import VehicleSlider from '../../../components/VehicleSlider';
+import ConfirmModal from '../../../components/ConfirmModal';
 
 interface AvailabilityTabProps {
     user: User;
     listings: any[];
+    fleet?: any[];
     onRefresh?: () => Promise<void>;
 }
 
-const AvailabilityTab: React.FC<AvailabilityTabProps> = ({ user, listings, onRefresh }) => {
+const AvailabilityTab: React.FC<AvailabilityTabProps> = ({ user, listings, fleet = [], onRefresh }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
     const handleSuccess = async () => {
         // Socket will automatically broadcast the update to all clients
@@ -21,6 +25,17 @@ const AvailabilityTab: React.FC<AvailabilityTabProps> = ({ user, listings, onRef
         if (onRefresh) {
             await onRefresh();
         }
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!itemToDelete) return;
+        try {
+            await api.deleteVehicleListing(itemToDelete);
+            if (onRefresh) await onRefresh();
+        } catch (err) {
+            console.error('Failed to delete listing:', err);
+        }
+        setItemToDelete(null);
     };
 
     return (
@@ -43,14 +58,17 @@ const AvailabilityTab: React.FC<AvailabilityTabProps> = ({ user, listings, onRef
             <div>
                 <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-300 dark:text-slate-600 mb-8 ml-1">Your Live Fleet Listings</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {listings.map((posting) => {
-                        const hasImages = posting.images && posting.images.length > 0 && posting.images.some((img: string) => img !== '');
+                    {(Array.isArray(listings) ? listings : []).map((posting) => {
+                        const validImages = Array.isArray(posting.images) ? posting.images.filter((img: any) => typeof img === 'string' && img.trim() !== '') : [];
+                        const hasImages = validImages.length > 0;
                         return (
                             <div key={posting.id} className="bg-white dark:bg-slate-800 rounded-[40px] border border-slate-50 dark:border-slate-700 shadow-sm hover:shadow-2xl transition-all p-5 group flex flex-col justify-between">
                                 <div>
                                     <div className="h-52 w-full rounded-[32px] bg-slate-50 dark:bg-slate-900 border-4 border-white dark:border-slate-800 shadow-inner overflow-hidden relative mb-6">
                                         {hasImages ? (
-                                            <VehicleSlider images={posting.images.filter((img: string) => img !== '')} />
+                                            <VehicleSlider images={validImages} />
+                                        ) : (posting.image || posting.img) ? (
+                                            <img src={posting.image || posting.img} className="w-full h-full object-cover" alt="vehicle" />
                                         ) : (
                                             <div className="w-full h-full flex flex-col items-center justify-center text-slate-200 dark:text-slate-800">
                                                 <Truck size={64} strokeWidth={1} />
@@ -102,11 +120,9 @@ const AvailabilityTab: React.FC<AvailabilityTabProps> = ({ user, listings, onRef
                                         Edit Details
                                     </button>
                                     <button
-                                        onClick={async () => {
-                                            if (window.confirm('Are you sure you want to remove this listing from Kwik Shop?')) {
-                                                await api.deleteVehicleListing(posting.id);
-                                                if (onRefresh) await onRefresh();
-                                            }
+                                        onClick={() => {
+                                            setItemToDelete(posting.id);
+                                            setIsDeleteConfirmOpen(true);
                                         }}
                                         className="px-5 py-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-[20px] hover:bg-red-100 dark:hover:bg-red-900/30 transition-all active:scale-95"
                                     >
@@ -136,6 +152,16 @@ const AvailabilityTab: React.FC<AvailabilityTabProps> = ({ user, listings, onRef
                 user={user}
                 onSuccess={handleSuccess}
                 postVehicleAvailability={api.postVehicleAvailability}
+                fleet={fleet}
+            />
+            <ConfirmModal
+                isOpen={isDeleteConfirmOpen}
+                onClose={() => setIsDeleteConfirmOpen(false)}
+                onConfirm={handleConfirmDelete}
+                title="Remove Listing"
+                message="Are you sure you want to remove this listing? This will take it off the Kwik Shop immediately."
+                confirmText="Remove Now"
+                type="danger"
             />
         </div>
     );

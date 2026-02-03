@@ -20,6 +20,16 @@ const driverController = {
         }
     },
 
+    updateVehicleListing: async (req, res) => {
+        try {
+            const listing = await driverService.updateVehicleListing(req.params.listingId, req.body);
+            res.json(listing);
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ error: 'Failed to update vehicle listing' });
+        }
+    },
+
 
     bidOnLoad: async (req, res) => {
         try {
@@ -95,6 +105,14 @@ const driverController = {
             res.json(result);
         } catch (err) {
             res.status(500).json({ error: err.message || 'Failed to trigger deposit reminder' });
+        }
+    },
+    deleteVehicleListing: async (req, res) => {
+        try {
+            const result = await driverService.deleteVehicleListing(req.params.id, req.user.id);
+            res.json(result);
+        } catch (err) {
+            res.status(500).json({ error: err.message || 'Failed to delete listing' });
         }
     }
 };

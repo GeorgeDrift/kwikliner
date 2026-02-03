@@ -15,6 +15,10 @@ const marketplaceService = {
         // Map shipment fields to marketplace fields
         const { id, shipper_id, route, cargo, weight, price, status, images, quantity } = shipment;
 
+        // Sanitize price for Numeric column
+        const cleanPrice = typeof price === 'string' ? parseFloat(price.replace(/[^0-9.]/g, '')) : parseFloat(price);
+        const safePrice = isNaN(cleanPrice) ? 0 : cleanPrice;
+
         await pool.query(`
             INSERT INTO marketplace_items (
                 external_id, type, title, description, price, price_str, 
@@ -32,7 +36,7 @@ const marketplaceService = {
                 metadata = EXCLUDED.metadata
         `, [
             id, 'Cargo', cargo, `Shipment route: ${route}`,
-            price, price > 0 ? `MWK ${Number(price).toLocaleString()}` : 'Open to Bids',
+            safePrice, safePrice > 0 ? `MWK ${Number(safePrice).toLocaleString()}` : 'Open to Bids',
             route, images, shipper_id, 'Verified Shipper',
             ['Bidding Open', 'Finding Driver'].includes(status) ? 'Active' : 'Closed',
             JSON.stringify({ weight, quantity })
@@ -44,9 +48,13 @@ const marketplaceService = {
     },
 
     syncVehicle: async (vehicle) => {
-        const { id, driver_id, driver_name, vehicle_type, capacity, route, price, images, location, manufacturer, model, operating_range } = vehicle;
+        const { id, driver_id, driver_name, vehicle_type, capacity, route, price, images, location, manufacturer, model } = vehicle;
         const title = manufacturer && model ? `${manufacturer} ${model}` : vehicle_type;
-        const description = `Capacity: ${capacity} | Range: ${operating_range || 'Standard'} | Hub: ${location || route}`;
+        const description = `Capacity: ${capacity} | Hub: ${location || route}`;
+
+        // Sanitize price for Numeric column
+        const cleanPrice = typeof price === 'string' ? parseFloat(price.replace(/[^0-9.]/g, '')) : parseFloat(price);
+        const safePrice = isNaN(cleanPrice) ? 0 : cleanPrice;
 
         await pool.query(`
             INSERT INTO marketplace_items (
@@ -65,10 +73,10 @@ const marketplaceService = {
                 metadata = EXCLUDED.metadata
         `, [
             id, 'Transport/Logistics', title, description,
-            price, price > 0 ? `MWK ${Number(price).toLocaleString()}` : price,
+            safePrice, safePrice > 0 ? `MWK ${Number(safePrice).toLocaleString()}` : price,
             location || route, images, driver_id, driver_name,
             'Active',
-            JSON.stringify({ capacity, route, manufacturer, model, operating_range, vehicle_type, location })
+            JSON.stringify({ capacity, route, manufacturer, model, vehicle_type, location })
         ]);
     },
 
@@ -90,7 +98,7 @@ const marketplaceService = {
                 status = EXCLUDED.status,
                 metadata = EXCLUDED.metadata
         `, [
-            id, 'Hardware/Goods', name, description,
+            id, 'Hardware', name, description,
             price, `MWK ${Number(price).toLocaleString()}`,
             'Storefront', images, owner_id, seller || 'Verified Seller',
             'Active',

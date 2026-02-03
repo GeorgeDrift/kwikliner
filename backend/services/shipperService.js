@@ -52,15 +52,15 @@ const shipperService = {
         try {
             await pool.query('BEGIN');
 
-            // Accept the bid and get amount
-            const bidResult = await pool.query('UPDATE bids SET status = $1 WHERE id = $2 RETURNING driver_id, amount', ['Accepted', bidId]);
+            // Accept the bid
+            const bidResult = await pool.query('UPDATE bids SET status = $1 WHERE id = $2 RETURNING driver_id', ['Accepted', bidId]);
             if (bidResult.rows.length === 0) throw new Error('Bid not found');
-            const { driver_id: driverId, amount: bidAmount } = bidResult.rows[0];
+            const driverId = bidResult.rows[0].driver_id;
 
-            // Update shipment with the bid price
+            // Update shipment
             const sUpdate = await pool.query(
-                "UPDATE shipments SET status = $1, driver_id = $2, price = $3, color = $4 WHERE id = $5 RETURNING *",
-                ['Waiting for Driver Commitment', driverId, bidAmount, 'text-purple-600 bg-purple-50', loadId]
+                "UPDATE shipments SET status = $1, driver_id = $2, color = $3 WHERE id = $4 RETURNING *",
+                ['Waiting for Driver Commitment', driverId, 'text-purple-600 bg-purple-50', loadId]
             );
 
             // SYNC WITH MARKETPLACE (status is now Handshake)
@@ -126,42 +126,41 @@ const shipperService = {
     },
 
     getStats: async (shipperId) => {
-        // 1. Total Shipments (All time)
+        // 1. Total Shipments
         const totalRes = await pool.query(
             'SELECT COUNT(*) as total FROM shipments WHERE shipper_id = $1',
             [shipperId]
         );
 
-        // 2. Active Now (Exclude finished/cancelled)
+        // 2. Active Now
         const activeRes = await pool.query(
             "SELECT COUNT(*) as total FROM shipments WHERE shipper_id = $1 AND status NOT IN ('Completed', 'Delivered', 'Rejected', 'Cancelled')",
             [shipperId]
         );
 
-        // 3. Total Spend (Real transactions only)
-        // We sum absolute value of negative gross_amounts (buyer debits)
+        // 3. Total Spend
         const spendRes = await pool.query(
-            "SELECT COALESCE(SUM(ABS(gross_amount)), 0) as total FROM transactions WHERE user_id = $1 AND status = 'Completed' AND type IN ('Ride Payment', 'Purchase', 'Sale Payment')",
+            "SELECT COALESCE(SUM(price), 0) as total FROM shipments WHERE shipper_id = $1 AND status != 'Rejected'",
             [shipperId]
         );
 
-        // 4. Monthly Growth (Shipment Volume)
+        // 4. Monthly Spend for Chart/Growth (Simplified growth for now)
         const growthRes = await pool.query(`
             SELECT 
                 (SELECT COUNT(*) FROM shipments WHERE shipper_id = $1 AND created_at > CURRENT_DATE - INTERVAL '30 days') as current_month,
                 (SELECT COUNT(*) FROM shipments WHERE shipper_id = $1 AND created_at BETWEEN CURRENT_DATE - INTERVAL '60 days' AND CURRENT_DATE - INTERVAL '30 days') as last_month
         `, [shipperId]);
 
-        const current = parseInt(growthRes.rows[0].current_month || 0);
-        const last = parseInt(growthRes.rows[0].last_month || 0);
+        const current = parseInt(growthRes.rows[0].current_month);
+        const last = parseInt(growthRes.rows[0].last_month);
         let growth = 0;
         if (last > 0) growth = ((current - last) / last) * 100;
         else if (current > 0) growth = 100;
 
         return {
-            totalShipments: parseInt(totalRes.rows[0].total || 0),
-            activeShipments: parseInt(activeRes.rows[0].total || 0),
-            totalSpend: parseFloat(spendRes.rows[0].total || 0),
+            totalShipments: parseInt(totalRes.rows[0].total),
+            activeShipments: parseInt(activeRes.rows[0].total),
+            totalSpend: parseFloat(spendRes.rows[0].total),
             growth: Math.round(growth)
         };
     },
@@ -182,33 +181,14 @@ const shipperService = {
     },
 
     getBids: async (shipperId) => {
-        console.log(`[ShipperService] Fetching bids for shipper: ${shipperId}`);
-
-        // Debug query to see all bids for this shipper regardless of status
-        const debugRes = await pool.query('SELECT COUNT(*) FROM bids b JOIN shipments s ON b.load_id = s.id WHERE s.shipper_id = $1', [shipperId]);
-        console.log(`[ShipperService] Total bids found for shipper (any status): ${debugRes.rows[0].count}`);
-
         const result = await pool.query(`
-            SELECT 
-                b.*, 
-                s.route, 
-                s.cargo, 
-                u.name as driver_name,
-                COALESCE(vl.rating, 5.0) as driver_rating,
-                COALESCE(vl.vehicle_type, 'Truck') as vehicle_type
+            SELECT b.*, s.route, s.cargo, u.name as driver_name, u.rating as driver_rating
             FROM bids b
             JOIN shipments s ON b.load_id = s.id
             JOIN users u ON b.driver_id = u.id
-            LEFT JOIN (
-                SELECT DISTINCT ON (driver_id) driver_id, rating, vehicle_type 
-                FROM vehicle_listings 
-                ORDER BY driver_id, created_at DESC
-            ) vl ON b.driver_id = vl.driver_id
             WHERE s.shipper_id = $1 AND b.status = 'Pending'
             ORDER BY b.created_at DESC
         `, [shipperId]);
-
-        console.log(`[ShipperService] Bids with 'Pending' status: ${result.rowCount}`);
         return result.rows;
     },
 

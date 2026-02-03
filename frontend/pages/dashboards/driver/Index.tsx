@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { User, Vehicle } from '../../../types';
 import {
    LayoutGrid, Briefcase, Tag, Navigation, MessageSquare, Plus,
-   BarChart3, User as UserIcon, Settings, LogOut, Truck
+   BarChart3, User as UserIcon, Settings, LogOut
 } from 'lucide-react';
 import { api } from '../../../services/api';
+import { mapMarketData } from '../../../services/marketUtils';
 import ChatWidget from '../../../components/ChatWidget';
 import { io } from 'socket.io-client';
 
@@ -23,7 +24,6 @@ import ReportTab from './ReportTab';
 import AccountTab from './AccountTab';
 import SettingsTab from './SettingsTab';
 import WalletTab from './WalletTab';
-import MyVehiclesTab from './MyVehiclesTab';
 import BidModal from './BidModal';
 import CommitmentModal from './CommitmentModal';
 import DirectRequestModal from './DirectRequestModal';
@@ -55,7 +55,6 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ user, onLogout, mobil
    const [bidAmount, setBidAmount] = useState('');
 
    const [jobs, setJobs] = useState<any[]>([]);
-   const [myListings, setMyListings] = useState<any[]>([]);
    const [wallet, setWallet] = useState<any>({ balance: 0, currency: 'MWK' });
    const [transactions, setTransactions] = useState<any[]>([]);
    const [dbStats, setDbStats] = useState<any>({ fleet: { capacity: 0 }, marketJobs: 0, totalOrders: 0, wallet: { balance: 0, currency: 'MWK' }, revenue: [] });
@@ -92,29 +91,27 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ user, onLogout, mobil
 
    const loadData = async () => {
       try {
-         const [allJobs, allTrips, walletData, transData, statsData, publicCargoData, userListings, fleetData] = await Promise.all([
+         const [allJobs, allTrips, walletData, transData, fleetData, productsData, statsData, publicCargoData] = await Promise.all([
             api.getAvailableJobs().catch((err) => { console.error('Error fetching available jobs:', err); return []; }),
             api.getDriverTrips().catch(() => []),
             api.getWallet(user.id).catch(() => ({})),
             api.getWalletTransactions(user.id).catch(() => []),
+            api.getFleet(user.id).catch(() => []),
+            api.getProducts().catch(() => []),
             api.getDriverStats().catch(() => ({})),
-            api.getPublicCargoListings().catch((err) => { console.error('Public cargo fetch error:', err); return []; }),
-            api.getDriverListings().catch(() => []),
-            api.getDriverFleet().catch(() => [])
+            api.getPublicCargoListings().catch((err) => { console.error('Public cargo fetch error:', err); return []; })
          ]);
 
          console.log('=== Data Loaded ===', {
             publicCargoData: Array.isArray(publicCargoData) ? publicCargoData.length : 'error',
             allJobs: Array.isArray(allJobs) ? allJobs.length : 'error',
-            allTrips: Array.isArray(allTrips) ? allTrips.length : 'error',
-            fleetData: Array.isArray(fleetData) ? fleetData.length : 'error'
+            allTrips: Array.isArray(allTrips) ? allTrips.length : 'error'
          });
 
          setDbStats(statsData || {});
-         setWallet(walletData || statsData?.wallet || { balance: 0, currency: 'MWK' });
+         setWallet(statsData?.wallet || { balance: 0, currency: 'MWK' });
          setTransactions(Array.isArray(transData) ? transData : []);
          setFleet(Array.isArray(fleetData) ? fleetData : []);
-         setMyListings(Array.isArray(userListings) ? userListings : []);
 
          const combined = [...(Array.isArray(allJobs) ? allJobs : []), ...(Array.isArray(allTrips) ? allTrips : [])]
             .reduce((acc: any[], curr: any) => {
@@ -132,6 +129,7 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ user, onLogout, mobil
             date: d.created_at ? new Date(d.created_at).toLocaleDateString() : 'Just now'
          })));
 
+         setWallet(walletData || { balance: 0, currency: 'MWK' });
          setIsLoading(false);
       } catch (e) {
          console.error("API Error in loadData:", e);
@@ -156,7 +154,7 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ user, onLogout, mobil
 
       newSocket.on('market_data_update', (data: any[]) => {
          console.log('Socket: Received centralized market update', data.length);
-         setMarketItems(data);
+         setMarketItems(mapMarketData(data));
       });
 
       return () => {
@@ -174,15 +172,14 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ user, onLogout, mobil
       return (marketItems || []).filter(item => item.cat === 'Cargo').length;
    }, [marketItems]);
 
-   const totalCapacity = useMemo(() => {
-      if (dbStats?.fleet?.capacity > 0) return dbStats.fleet.capacity;
-      return fleet.reduce((acc, v) => {
-         const size = parseFloat(v.capacity?.toString().replace(/[^0-9.]/g, '') || '0');
-         return isNaN(size) ? acc : acc + size;
-      }, 0);
-   }, [dbStats, fleet]);
+   const totalCapacity = fleet.reduce((acc, v) => {
+      const size = parseInt(v.capacity);
+      return isNaN(size) ? acc : acc + size;
+   }, 0);
 
-
+   const myMarketListings = useMemo(() => {
+      return (marketItems || []).filter(item => item.ownerId === user.id);
+   }, [marketItems, user.id]);
 
 
 
@@ -231,17 +228,9 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ user, onLogout, mobil
    };
 
 
-   const handleAcceptJob = async (jobOrId: string | any) => {
+   const handleAcceptJob = async (jobId: string) => {
       try {
-         let job;
-         if (typeof jobOrId === 'string') {
-            job = jobs.find(j => j.id === jobOrId);
-            // Fallback: Check market items if not found in main jobs list
-            if (!job) job = marketItems.find(m => m.id === jobOrId);
-         } else {
-            job = jobOrId;
-         }
-
+         const job = jobs.find(j => j.id === jobId);
          if (job) {
             if (job.status === 'Waiting for Driver Commitment') {
                setCommitmentJob(job);
@@ -256,12 +245,10 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ user, onLogout, mobil
                return;
             }
 
-            // For Market items particularly
             setSelectedJob(job);
             setIsBidModalOpen(true);
          }
       } catch (e) {
-         console.error(e);
          alert('Failed to process job');
       }
    };
@@ -315,7 +302,6 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ user, onLogout, mobil
          setIsBidModalOpen(false);
          setBidAmount('');
          setJobsSubTab('Proposed');
-         setActiveMenu('BrowseJobs');
          alert('Bid submitted successfully! The shipper will review your proposal.');
          loadData();
       } catch (e) {
@@ -365,26 +351,35 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ user, onLogout, mobil
       }, 1500);
    };
 
-   const handlePostAvailability = async (postData: any) => {
+   const handlePostAvailability = async () => {
       try {
          const post = {
             driverName: user.name,
-            vehicleType: postData.vehicleType,
-            capacity: postData.capacity,
-            route: postData.operatingRange,
-            price: postData.price,
-            location: postData.location,
-            manufacturer: postData.manufacturer,
-            model: postData.model,
-            operating_range: postData.operatingRange,
-            images: postData.images.filter((img: string) => img !== '')
+            vehicleType: fleet[0].model,
+            capacity: fleet[0].capacity,
+            route: 'Lilongwe Router',
+            price: 'MWK 350,000',
+            location: 'Lilongwe',
+            images: [
+               'C:/Users/Admin/.gemini/antigravity/brain/e30de761-41c6-41bc-91d1-fe430548a242/truck_exterior_1_1768577726403.png',
+               'C:/Users/Admin/.gemini/antigravity/brain/e30de761-41c6-41bc-91d1-fe430548a242/truck_interior_2_1768577751662.png',
+               'C:/Users/Admin/.gemini/antigravity/brain/e30de761-41c6-41bc-91d1-fe430548a242/truck_cargo_3_1768577778905.png'
+            ]
          };
          await api.postVehicleAvailability(post);
          alert('Availability published! Shippers can now find and hire you directly.');
          setActiveMenu('Overview');
-         loadData();
       } catch (e) {
          alert('Failed to publish availability');
+      }
+   };
+
+   const handleDeleteListing = async (id: string) => {
+      try {
+         await api.deleteDriverListing(id);
+         loadData();
+      } catch (e) {
+         alert('Failed to delete listing');
       }
    };
 
@@ -392,9 +387,8 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ user, onLogout, mobil
       MAIN_MENU: [
          { id: 'Overview', icon: <LayoutGrid size={20} />, label: 'Overview' },
          { id: 'BrowseJobs', icon: <Briefcase size={20} />, label: 'Browse Jobs' },
-         { id: 'MyVehicles', icon: <Truck size={20} />, label: 'My Cars' },
          { id: 'Market', icon: <Tag size={20} />, label: 'Kwik Shop' },
-         { id: 'MyTrips', icon: <Navigation size={20} />, label: 'My Trips', badge: jobs.filter(j => j.type === 'Active' || j.type === 'Requests').length },
+         { id: 'MyTrips', icon: <Navigation size={20} />, label: 'My Trips', badge: jobs.filter(j => j.type === 'Accepted').length },
          { id: 'Message', icon: <MessageSquare size={20} />, label: 'Messages', badge: 0 },
       ],
       GENERAL: [
@@ -419,13 +413,9 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ user, onLogout, mobil
       return value;
    };
 
-   // Derive Top 5 Highest Paying Trips (Only completed/paid ones)
+   // Derive Top 5 Highest Paying Trips
    const topTrips = [...jobs]
-      .filter((j: any) =>
-         j && j.price &&
-         j.type !== 'Market' &&
-         (['Completed', 'Delivered'].includes(j.status))
-      )
+      .filter((j: any) => j && j.price)
       .sort((a, b) => parsePrice(b.price) - parsePrice(a.price))
       .slice(0, 5);
 
@@ -457,13 +447,13 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ user, onLogout, mobil
          return acc;
       }, {});
 
-      const max = Math.max(...Object.values(grouped) as number[], 0);
+      const max = Math.max(...Object.values(grouped) as number[], 1);
 
       return months.map(m => {
          const val = grouped[m] || 0;
          return {
             month: m,
-            value: max > 0 ? (val / max) * 100 : 0,
+            value: (val / max) * 100,
             amt: val > 1000 ? `${(val / 1000).toFixed(1)}K` : val.toString()
          };
       });
@@ -522,7 +512,7 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ user, onLogout, mobil
                   <BrowseJobsTab
                      jobs={jobs || []}
                      marketItems={marketItems || []}
-                     myListings={myListings || []}
+                     myListings={myMarketListings}
                      jobsSubTab={jobsSubTab}
                      setJobsSubTab={setJobsSubTab}
                      jobsLocationFilter={jobsLocationFilter}
@@ -550,9 +540,11 @@ const DriverDashboard: React.FC<DriverDashboardProps> = ({ user, onLogout, mobil
                   />
                );
             case 'PostListing':
-               return <PostListingTab handlePostAvailability={handlePostAvailability} myListings={myListings} />;
-            case 'MyVehicles':
-               return <MyVehiclesTab myListings={myListings} setActiveMenu={setActiveMenu} />;
+               return <PostListingTab
+                  handlePostAvailability={handlePostAvailability}
+                  myListings={myMarketListings}
+                  handleDeleteListing={handleDeleteListing}
+               />;
             case 'Wallet':
                return <WalletTab wallet={wallet || { balance: 0, currency: 'MWK' }} transactions={transactions || []} onWithdraw={() => setIsWithdrawModalOpen(true)} />;
             case 'Settings':

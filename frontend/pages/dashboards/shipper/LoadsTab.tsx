@@ -50,7 +50,9 @@ const LoadsTab: React.FC<LoadsTabProps> = ({
                         <tbody>
                             {shipmentsData.Active.filter((s: any) =>
                                 s.status === 'Bidding Open' ||
-                                s.status === 'Finding Driver'
+                                s.status === 'Finding Driver' ||
+                                s.status === 'Waiting for Driver Commitment' ||
+                                s.status === 'Pending Deposit'
                             ).sort((a: any, b: any) => {
                                 const dateA = new Date(a.pickup_date || a.created_at || 0).getTime();
                                 const dateB = new Date(b.pickup_date || b.created_at || 0).getTime();
@@ -58,34 +60,34 @@ const LoadsTab: React.FC<LoadsTabProps> = ({
                             }).map((row: any, i: number) => {
                                 const pickupDate = row.pickup_date ? new Date(row.pickup_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' }) : 'N/A';
                                 return (
-                                    <tr key={i} className="border-b border-slate-50 dark:border-slate-700 hover:bg-slate-50/50 dark:hover:bg-slate-900/50 transition-all cursor-pointer">
-                                        <td className="px-8 py-6 text-sm font-black text-slate-900 dark:text-white">{row.id}</td>
-                                        <td className="px-8 py-6 text-sm font-bold text-slate-700 dark:text-slate-300">{row.route}</td>
-                                        <td className="px-8 py-6 text-sm font-bold text-slate-500 dark:text-slate-400">{row.cargo}</td>
-                                        <td className="px-8 py-6 text-sm font-black text-blue-600 dark:text-blue-400">{row.price}</td>
-                                        <td className="px-8 py-6 text-sm font-bold text-slate-600 dark:text-slate-400">{pickupDate}</td>
-                                        <td className="px-8 py-6">
-                                            <span className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest ${row.color}`}>{row.status}</span>
-                                            {row.bids > 0 && row.status === 'Bidding Open' && (
-                                                <span className="ml-2 bg-amber-500 text-white px-2 py-1 rounded-md text-[9px] font-black">{row.bids} BIDS</span>
-                                            )}
-                                            {row.status === 'Waiting for Driver Commitment' && (
-                                                <span className="ml-2 bg-purple-500 text-white px-2 py-1 rounded-md text-[9px] font-black uppercase">Handshake</span>
-                                            )}
-                                            {row.status === 'Pending Deposit' && (
-                                                <span className="ml-2 bg-blue-500 text-white px-2 py-1 rounded-md text-[9px] font-black uppercase">Commitment Recieved</span>
-                                            )}
-                                        </td>
-                                        <td className="px-8 py-6">
-                                            <button
-                                                onClick={() => { setSelectedLoadForBids(row); setIsBidsModalOpen(true); }}
-                                                className="px-4 py-2 bg-amber-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-amber-100 dark:shadow-none flex items-center gap-2 hover:bg-amber-600 transition-all"
-                                            >
-                                                <Gavel size={14} /> View Bids
-                                            </button>
-                                        </td>
-                                    </tr>
-                                );
+                                <tr key={i} className="border-b border-slate-50 dark:border-slate-700 hover:bg-slate-50/50 dark:hover:bg-slate-900/50 transition-all cursor-pointer">
+                                    <td className="px-8 py-6 text-sm font-black text-slate-900 dark:text-white">{row.id}</td>
+                                    <td className="px-8 py-6 text-sm font-bold text-slate-700 dark:text-slate-300">{row.route}</td>
+                                    <td className="px-8 py-6 text-sm font-bold text-slate-500 dark:text-slate-400">{row.cargo}</td>
+                                    <td className="px-8 py-6 text-sm font-black text-blue-600 dark:text-blue-400">{row.price}</td>
+                                    <td className="px-8 py-6 text-sm font-bold text-slate-600 dark:text-slate-400">{pickupDate}</td>
+                                    <td className="px-8 py-6">
+                                        <span className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest ${row.color}`}>{row.status}</span>
+                                        {row.bids > 0 && row.status === 'Bidding Open' && (
+                                            <span className="ml-2 bg-amber-500 text-white px-2 py-1 rounded-md text-[9px] font-black">{row.bids} BIDS</span>
+                                        )}
+                                        {row.status === 'Waiting for Driver Commitment' && (
+                                            <span className="ml-2 bg-purple-500 text-white px-2 py-1 rounded-md text-[9px] font-black uppercase">Handshake</span>
+                                        )}
+                                        {row.status === 'Pending Deposit' && (
+                                            <span className="ml-2 bg-blue-500 text-white px-2 py-1 rounded-md text-[9px] font-black uppercase">Commitment Recieved</span>
+                                        )}
+                                    </td>
+                                    <td className="px-8 py-6">
+                                        <button
+                                            onClick={() => { setSelectedLoadForBids(row); setIsBidsModalOpen(true); }}
+                                            className="px-4 py-2 bg-amber-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-amber-100 dark:shadow-none flex items-center gap-2 hover:bg-amber-600 transition-all"
+                                        >
+                                            <Gavel size={14} /> View Bids
+                                        </button>
+                                    </td>
+                                </tr>
+                            );
                             })}
                             {shipmentsData.Active.filter((s: any) =>
                                 s.status === 'Bidding Open' ||

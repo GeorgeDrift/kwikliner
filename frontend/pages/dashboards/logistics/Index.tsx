@@ -4,12 +4,11 @@ import { User } from '../../../types';
 import {
   LayoutGrid, Truck, MessageSquare,
   Settings, LogOut, Briefcase, Users,
-  BarChart3, ShieldCheck, Megaphone, ShoppingCart
+  BarChart3, ShieldCheck, Megaphone, ShoppingCart, X, Trash2
 } from 'lucide-react';
-import { io } from 'socket.io-client';
 import ChatWidget from '../../../components/ChatWidget';
 import { api } from '../../../services/api';
-import { fileToBase64 } from '../../../services/fileUtils';
+import { io } from 'socket.io-client';
 
 // Tab Components
 import OverviewTab from './OverviewTab';
@@ -17,7 +16,6 @@ import FleetTab from './FleetTab';
 import DriversTab from './DriversTab';
 import AvailabilityTab from './AvailabilityTab';
 import BoardTab from './BoardTab';
-import MyTripsTab from '../driver/MyTripsTab';
 import JobsTab from './JobsTab';
 import ReportTab from './ReportTab';
 import AccountTab from './AccountTab';
@@ -32,7 +30,6 @@ import Sidebar from './Sidebar';
 import MobileSidebar from './MobileSidebar';
 import AddVehicleModal from './AddVehicleModal';
 import BidModal from './BidModal';
-import PostAvailabilityModal from './PostAvailabilityModal';
 import CommitmentModal from './CommitmentModal';
 
 interface LogisticsOwnerDashboardProps {
@@ -46,8 +43,6 @@ const LogisticsOwnerDashboard = ({ user, onLogout, mobileMenuAction }: Logistics
   const [activeMenu, setActiveMenu] = useState('Overview');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAddVehicleOpen, setIsAddVehicleOpen] = useState(false);
-  const [isPostFromFleetOpen, setIsPostFromFleetOpen] = useState(false);
-  const [selectedFleetVehicle, setSelectedFleetVehicle] = useState<any>(null);
   const [jobsTab, setJobsTab] = useState<'requests' | 'bids' | 'proposed'>('requests');
   const [fromLocation, setFromLocation] = useState('All');
   const [toLocation, setToLocation] = useState('All');
@@ -58,9 +53,11 @@ const LogisticsOwnerDashboard = ({ user, onLogout, mobileMenuAction }: Logistics
   const [biddingLoad, setBiddingLoad] = useState<any>(null);
   const [bidAmount, setBidAmount] = useState('');
   const [marketFilter, setMarketFilter] = useState('Cargo');
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const [jobs, setJobs] = useState<any[]>([]);
+
+  // Cart State
   const [cart, setCart] = useState<any[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+
   const [hiringUrgency, setHiringUrgency] = useState<Record<string, string>>({});
   const [stats, setStats] = useState({
     fleetSize: 0,
@@ -70,12 +67,16 @@ const LogisticsOwnerDashboard = ({ user, onLogout, mobileMenuAction }: Logistics
   });
   const [listings, setListings] = useState<any[]>([]);
   const [availableFleets, setAvailableFleets] = useState<any[]>([]);
-  const [marketProducts, setMarketProducts] = useState<any[]>([]);
   const [analytics, setAnalytics] = useState<any[]>([]);
+  const [fleet, setFleet] = useState<any[]>([]);
+  const [drivers, setDrivers] = useState<any[]>([]);
+  const [acceptedJobs, setAcceptedJobs] = useState<any[]>([]);
 
-
-
-
+  // Chat State
+  const [activeChatId, setActiveChatId] = useState<number | null>(null);
+  const [chatInput, setChatInput] = useState('');
+  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [conversations] = useState<any[]>([]);
 
   const addToCart = (item: any) => {
     setCart(prev => {
@@ -88,25 +89,27 @@ const LogisticsOwnerDashboard = ({ user, onLogout, mobileMenuAction }: Logistics
     setIsCartOpen(true);
   };
 
-  // Fleet State (Fetched from API)
-  const [fleet, setFleet] = useState<any[]>([]);
+  const removeFromCart = (id: string) => {
+    setCart(prev => prev.filter(i => i.id !== id));
+  };
+
+  const updateQuantity = (id: string, delta: number) => {
+    setCart(prev => prev.map(i => {
+      if (i.id === id) {
+        const newQty = Math.max(1, i.quantity + delta);
+        return { ...i, quantity: newQty };
+      }
+      return i;
+    }));
+  };
+
+  const cartTotal = cart.reduce((acc, item) => acc + (item.price * (item.quantity || 1)), 0);
 
   useEffect(() => {
     if (mobileMenuAction && mobileMenuAction > 0) {
       setIsMobileMenuOpen(true);
     }
   }, [mobileMenuAction]);
-
-
-
-  // Drivers State
-  const [drivers, setDrivers] = useState<any[]>([]);
-
-  // Chat State
-  const [activeChatId, setActiveChatId] = useState<number | null>(null);
-  const [chatInput, setChatInput] = useState('');
-  const [chatMessages, setChatMessages] = useState<any[]>([]);
-  const [conversations] = useState<any[]>([]);
 
   const handleSendChatMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,22 +124,21 @@ const LogisticsOwnerDashboard = ({ user, onLogout, mobileMenuAction }: Logistics
   };
 
   const [newVehicle, setNewVehicle] = useState({
-    make: '', model: '', plate: '', capacity: '', type: 'Flatbed', location: '', operating_range: ''
+    make: '', model: '', plate: '', capacity: '', type: 'Flatbed'
   });
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const [jobProposals, setJobProposals] = useState<any[]>([]);
 
   const marketItems = useMemo(() => {
-    return availableFleets; // This will hold the socket data from marketplace_items
+    return availableFleets;
   }, [availableFleets]);
 
   const [wallet, setWallet] = useState<any>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
-  const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadData = async () => {
     try {
-      setLoadError(null);
       const [
         allTrips,
         walletData,
@@ -145,40 +147,32 @@ const LogisticsOwnerDashboard = ({ user, onLogout, mobileMenuAction }: Logistics
         logisticsDrivers,
         logisticsListings,
         logisticsAnalytics,
-        logisticsFleet
+        fleetData
       ] = await Promise.all([
-        api.getLogisticsTrips().catch((e) => { console.warn('Trips failed:', e); return []; }),
-        api.getWallet(user.id).catch((e) => { console.warn('Wallet failed:', e); return {}; }),
-        api.getWalletTransactions(user.id).catch((e) => { console.warn('Transactions failed:', e); return []; }),
-        api.getLogisticsStats().catch((e) => { console.warn('Stats failed:', e); return {}; }),
-        api.getLogisticsDrivers().catch((e) => { console.warn('Drivers failed:', e); return []; }),
-        api.getLogisticsListings().catch((e) => { console.warn('Listings failed:', e); return []; }),
-        api.getLogisticsAnalytics().catch((e) => { console.warn('Analytics failed:', e); return []; }),
-        api.getFleet().catch((e) => { console.warn('Fleet failed:', e); return []; })
+        api.getDriverTrips().catch(() => []),
+        api.getWallet(user.id).catch(() => ({ balance: 0, currency: 'MWK' })),
+        api.getWalletTransactions(user.id).catch(() => []),
+        api.getLogisticsStats().catch(() => ({ fleetSize: 0, activeJobs: 0, pendingBids: 0, wallet: { balance: 0, currency: 'MWK' } })),
+        api.getLogisticsDrivers().catch(() => []),
+        api.getLogisticsListings().catch(() => []),
+        api.getLogisticsAnalytics().catch(() => []),
+        api.getFleet(user.id).catch(() => [])
       ]);
 
       setWallet(walletData);
       setTransactions(Array.isArray(transData) ? transData : []);
-
-      setStats(logisticsStats as any);
+      setStats(logisticsStats);
       setDrivers(logisticsDrivers);
       setListings(logisticsListings);
       setAnalytics(logisticsAnalytics);
-      setFleet(Array.isArray(logisticsFleet) ? logisticsFleet : []);
+      setFleet(fleetData);
 
-      setJobs((Array.isArray(allTrips) ? allTrips : []).map((d: any) => ({
-        ...d,
-        type: (['Waiting for Driver Commitment', 'Pending Deposit', 'Active (Waiting Delivery)', 'In Transit'].includes(d.status)) ? 'Active' : 'History',
-        date: d.created_at ? new Date(d.created_at).toLocaleDateString() : 'Just now'
-      })));
-
-      setAcceptedJobs((Array.isArray(allTrips) ? allTrips : []).filter((j: any) => j.status !== 'Delivered' && j.status !== 'Completed').map((j: any) => ({
+      setAcceptedJobs((Array.isArray(allTrips) ? allTrips : []).map((j: any) => ({
         ...j,
         assignedDriver: j.assigned_driver_id || null
       })));
     } catch (err) {
-      console.error("Failed to load logistics data:", err);
-      setLoadError(err instanceof Error ? err.message : 'Unknown error');
+      console.warn("Failed to load logistics data", err);
     }
   };
 
@@ -195,19 +189,14 @@ const LogisticsOwnerDashboard = ({ user, onLogout, mobileMenuAction }: Logistics
     });
 
     newSocket.on('market_data_update', (data: any[]) => {
-      console.log('Logistics Socket: Received unified market data', data.length);
-      console.log('Transport/Logistics items:', data.filter((item: any) => item.cat === 'Transport/Logistics').length);
-      console.log('Sample Transport item:', data.find((item: any) => item.cat === 'Transport/Logistics'));
-      setAvailableFleets(data);
+      console.log('Logistics Socket: Received unified market data', data?.length || 0);
+      if (data) setAvailableFleets(data);
     });
 
     return () => {
       newSocket.disconnect();
     };
   }, [user.id]);
-
-
-  const [acceptedJobs, setAcceptedJobs] = useState<any[]>([]);
 
   const handleAcceptJob = async (job: any) => {
     try {
@@ -228,7 +217,6 @@ const LogisticsOwnerDashboard = ({ user, onLogout, mobileMenuAction }: Logistics
     }
   };
 
-
   const handleSubmitBid = async () => {
     if (!biddingLoad || !bidAmount) return;
     try {
@@ -243,14 +231,14 @@ const LogisticsOwnerDashboard = ({ user, onLogout, mobileMenuAction }: Logistics
   };
 
   const handleDirectHire = (driverName: string) => {
-    alert(`Direct Request sent to ${driverName}! (Simulated parity with Shipper flow)`);
+    alert(`Direct Request sent to ${driverName}!`);
   };
 
   const handleLogisticsCommit = async (decision: 'COMMIT' | 'DECLINE') => {
     if (!commitmentJob) return;
     try {
       await api.driverCommitToJob(commitmentJob.id, decision, declineReason);
-      alert(decision === 'COMMIT' ? "Trip activated! Your fleet has committed." : "Job declined.");
+      alert(decision === 'COMMIT' ? "Trip activated!" : "Job declined.");
       setIsCommitModalOpen(false);
       setCommitmentJob(null);
       setDeclineReason('');
@@ -265,7 +253,6 @@ const LogisticsOwnerDashboard = ({ user, onLogout, mobileMenuAction }: Logistics
       { id: 'Overview', icon: <LayoutGrid size={20} />, label: 'Fleet Overview' },
       { id: 'Fleet', icon: <Truck size={20} />, label: 'My Fleet' },
       { id: 'Drivers', icon: <Users size={20} />, label: 'Drivers' },
-      { id: 'MyTrips', icon: <Megaphone size={20} />, label: 'My Trips' },
       { id: 'Messages', icon: <MessageSquare size={20} />, label: 'Messages' },
       { id: 'Availability', icon: <Megaphone size={20} />, label: 'Post Availability' },
       { id: 'Board', icon: <Briefcase size={20} />, label: 'Jobs Proposal' },
@@ -282,22 +269,14 @@ const LogisticsOwnerDashboard = ({ user, onLogout, mobileMenuAction }: Logistics
     ]
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      try {
-        return await fileToBase64(file);
-      } catch (error) {
-        console.error('Image upload failed:', error);
-        alert('Failed to process image.');
-        return null;
-      }
-    }
-    return null;
+  const onPostVehicle = (vehicle: any) => {
+    // Logic to open PostAvailabilityModal or similar
+    console.log('Post vehicle:', vehicle);
   };
 
-  const handleImageRemove = () => {
-    // No longer needed in parent
+  const onEditVehicle = (vehicle: any) => {
+    setNewVehicle(vehicle);
+    setIsAddVehicleOpen(true);
   };
 
   const handleAddVehicle = async (e: React.FormEvent, images: string[]) => {
@@ -307,17 +286,19 @@ const LogisticsOwnerDashboard = ({ user, onLogout, mobileMenuAction }: Logistics
     await api.addVehicle({
       ...newVehicle,
       status: 'Available',
-      images: images && images.length > 0 ? images : ['https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&q=80&w=400'],
+      images: images,
+      image: images[0] || 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&q=80&w=400',
       ownerId: user.id
     });
 
     setIsAddVehicleOpen(false);
-    setNewVehicle({ make: '', model: '', plate: '', capacity: '', type: 'Flatbed', location: '', operating_range: '' });
+    setNewVehicle({ make: '', model: '', plate: '', capacity: '', type: 'Flatbed' });
+    setSelectedImage(null);
     loadData();
   };
 
   const handleDeleteVehicle = async (id: string) => {
-    if (window.confirm('Are you sure you want to remove this vehicle from your fleet?')) {
+    if (window.confirm('Are you sure you want to remove this vehicle?')) {
       await api.deleteVehicle(id);
       loadData();
     }
@@ -326,91 +307,17 @@ const LogisticsOwnerDashboard = ({ user, onLogout, mobileMenuAction }: Logistics
   const renderContent = () => {
     switch (activeMenu) {
       case 'Overview':
-        return (
-          <OverviewTab
-            user={user}
-            fleet={fleet}
-            jobProposals={jobProposals}
-            setActiveMenu={setActiveMenu}
-            setJobsTab={setJobsTab}
-            navigate={navigate}
-            wallet={wallet}
-            stats={stats}
-            listings={listings}
-          />
-        );
-      case 'MyTrips':
-        return <MyTripsTab jobs={jobs} handleAcceptJob={handleAcceptJob} loadData={loadData} />;
+        return <OverviewTab user={user} fleet={fleet} jobProposals={jobProposals} setActiveMenu={setActiveMenu} setJobsTab={setJobsTab} navigate={navigate} wallet={wallet} stats={stats} listings={listings} />;
       case 'Fleet':
-        return (
-          <FleetTab
-            fleet={fleet}
-            setIsAddVehicleOpen={setIsAddVehicleOpen}
-            handleDeleteVehicle={handleDeleteVehicle}
-            onPostVehicle={async (vehicle) => {
-              // One-Click Posting if data is complete
-              if (vehicle.price && vehicle.location) {
-                // Show loading feedback (optional, or use toast promise)
-                try {
-                  await api.postVehicleAvailability({
-                    location: vehicle.location,
-                    operatingRange: vehicle.operating_range || 'National',
-                    price: vehicle.price,
-                    capacity: vehicle.capacity || 'N/A',
-                    vehicleType: vehicle.type,
-                    manufacturer: vehicle.make,
-                    model: vehicle.model,
-                    images: vehicle.images || (vehicle.image ? [vehicle.image, '', ''] : ['', '', ''])
-                  });
-                  // Refresh listings
-                  const freshListings = await api.getLogisticsListings();
-                  setListings(freshListings);
-                  // We rely on socket for 'availableFleets' update, or force refresh if needed.
-                  // Toast happens inside API service? If not, we should adding it here?
-                  // Assuming API service doesn't toast, we can add toast here if we had access to addToast
-                  // But existing handleSuccess logic confirms posting.
-                } catch (e) {
-                  console.error("Quick post failed", e);
-                  // Fallback to modal on error
-                  setSelectedFleetVehicle(vehicle);
-                  setIsPostFromFleetOpen(true);
-                }
-              } else {
-                // Fallback to modal if missing data
-                setSelectedFleetVehicle(vehicle);
-                setIsPostFromFleetOpen(true);
-              }
-            }}
-          />
-        );
+        return <FleetTab fleet={fleet} setIsAddVehicleOpen={setIsAddVehicleOpen} handleDeleteVehicle={handleDeleteVehicle} onPostVehicle={onPostVehicle} onEditVehicle={onEditVehicle} />;
       case 'Drivers':
         return <DriversTab drivers={drivers} />;
       case 'Availability':
-        const refreshListings = async () => {
-          try {
-            const freshListings = await api.getLogisticsListings();
-            setListings(freshListings);
-          } catch (e) {
-            console.error('Failed to refresh listings:', e);
-          }
-        };
-        return <AvailabilityTab user={user} listings={listings} onRefresh={refreshListings} />;
+        return <AvailabilityTab user={user} listings={listings} />;
       case 'Jobs':
         return <JobsTab acceptedJobs={acceptedJobs} handleAcceptJob={handleAcceptJob} />;
       case 'Board':
-        return (
-          <BoardTab
-            jobsTab={jobsTab}
-            setJobsTab={setJobsTab}
-            jobProposals={jobProposals}
-            handleAcceptJob={handleAcceptJob}
-            fromLocation={fromLocation}
-            setFromLocation={setFromLocation}
-            toLocation={toLocation}
-            setToLocation={setToLocation}
-          />
-        );
-
+        return <BoardTab jobsTab={jobsTab} setJobsTab={setJobsTab} jobProposals={jobProposals} handleAcceptJob={handleAcceptJob} fromLocation={fromLocation} setFromLocation={setFromLocation} toLocation={toLocation} setToLocation={setToLocation} />;
       case 'Shop':
         return (
           <MarketTab
@@ -420,7 +327,7 @@ const LogisticsOwnerDashboard = ({ user, onLogout, mobileMenuAction }: Logistics
             setMarketFilter={setMarketFilter}
             marketItems={marketItems}
             addToCart={addToCart}
-            handleBookService={(service) => alert(`Service Booked: ${service.name} from ${service.provider}`)}
+            handleBookService={(service) => alert(`Service Booked: ${service.name}`)}
             hiringUrgency={hiringUrgency}
             setHiringUrgency={setHiringUrgency}
             handleDirectHire={handleDirectHire}
@@ -432,17 +339,7 @@ const LogisticsOwnerDashboard = ({ user, onLogout, mobileMenuAction }: Logistics
       case 'Report':
         return <ReportTab stats={stats} analytics={analytics} />;
       case 'Messages':
-        return (
-          <MessageTab
-            activeChatId={activeChatId}
-            setActiveChatId={setActiveChatId}
-            chatMessages={chatMessages}
-            chatInput={chatInput}
-            setChatInput={setChatInput}
-            handleSendChatMessage={handleSendChatMessage}
-            conversations={conversations}
-          />
-        );
+        return <MessageTab activeChatId={activeChatId} setActiveChatId={setActiveChatId} chatMessages={chatMessages} chatInput={chatInput} setChatInput={setChatInput} handleSendChatMessage={handleSendChatMessage} conversations={conversations} />;
       case 'Account':
         return <AccountTab />;
       case 'Settings':
@@ -455,81 +352,72 @@ const LogisticsOwnerDashboard = ({ user, onLogout, mobileMenuAction }: Logistics
   return (
     <div className="flex flex-col md:flex-row bg-[#F8F9FB] dark:bg-slate-900 min-h-screen text-slate-900 dark:text-slate-100 overflow-hidden font-['Inter'] relative transition-colors duration-200">
       <Sidebar activeMenu={activeMenu} setActiveMenu={setActiveMenu} menuSections={menuSections} onLogout={onLogout} />
-      <MobileSidebar
-        isOpen={isMobileMenuOpen}
-        onClose={() => setIsMobileMenuOpen(false)}
-        activeMenu={activeMenu}
-        setActiveMenu={setActiveMenu}
-        menuSections={menuSections}
-        user={user}
-        navigate={navigate}
-        onLogout={onLogout}
-      />
+      <MobileSidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} activeMenu={activeMenu} setActiveMenu={setActiveMenu} menuSections={menuSections} user={user} navigate={navigate} onLogout={onLogout} />
 
       <main className={`flex-grow flex flex-col min-w-0 h-screen overflow-y-auto relative ${activeMenu === 'Report' ? 'p-4 md:p-8 lg:p-10 md:pt-12' : 'p-4 md:p-10 lg:p-14 md:pt-16'}`}>
-        {loadError && (
-          <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-            <p className="text-red-800 dark:text-red-200 font-bold">Error loading dashboard data: {loadError}</p>
-            <button
-              onClick={() => loadData()}
-              className="mt-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-bold"
-            >
-              Retry
-            </button>
-          </div>
-        )}
         {renderContent()}
 
-        <AddVehicleModal
-          isOpen={isAddVehicleOpen}
-          onClose={() => setIsAddVehicleOpen(false)}
-          handleAddVehicle={handleAddVehicle}
-          newVehicle={newVehicle}
-          setNewVehicle={setNewVehicle}
-          handleImageUpload={handleImageUpload}
-        />
-
-        <PostAvailabilityModal
-          isOpen={isPostFromFleetOpen}
-          onClose={() => setIsPostFromFleetOpen(false)}
-          user={user}
-          onSuccess={async () => {
-            // Refresh listings after posting
-            const freshListings = await api.getLogisticsListings();
-            setListings(freshListings);
-          }}
-          postVehicleAvailability={api.postVehicleAvailability}
-          initialData={selectedFleetVehicle ? {
-            manufacturer: selectedFleetVehicle.make,
-            model: selectedFleetVehicle.model,
-            vehicleType: selectedFleetVehicle.type,
-            capacity: selectedFleetVehicle.capacity,
-            location: selectedFleetVehicle.location, // Pre-fill location
-            operatingRange: selectedFleetVehicle.operating_range, // Pre-fill range
-            images: selectedFleetVehicle.images || (selectedFleetVehicle.image ? [selectedFleetVehicle.image, '', ''] : ['', '', ''])
-          } : {}}
-        />
-
-        <BidModal
-          isOpen={isBidModalOpen}
-          onClose={() => setIsBidModalOpen(false)}
-          biddingLoad={biddingLoad}
-          bidAmount={bidAmount}
-          setBidAmount={setBidAmount}
-          handleSubmitBid={handleSubmitBid}
-        />
-
-        <CommitmentModal
-          isOpen={isCommitModalOpen}
-          onClose={() => setIsCommitModalOpen(false)}
-          commitmentJob={commitmentJob}
-          handleLogisticsCommit={handleLogisticsCommit}
-          setDeclineReason={setDeclineReason}
-        />
-
-        {/* Assistant Widget integration */}
+        <AddVehicleModal isOpen={isAddVehicleOpen} onClose={() => setIsAddVehicleOpen(false)} handleAddVehicle={handleAddVehicle} newVehicle={newVehicle} setNewVehicle={setNewVehicle} />
+        <BidModal isOpen={isBidModalOpen} onClose={() => setIsBidModalOpen(false)} biddingLoad={biddingLoad} bidAmount={bidAmount} setBidAmount={setBidAmount} handleSubmitBid={handleSubmitBid} />
+        <CommitmentModal isOpen={isCommitModalOpen} onClose={() => setIsCommitModalOpen(false)} commitmentJob={commitmentJob} handleLogisticsCommit={handleLogisticsCommit} setDeclineReason={setDeclineReason} />
         <ChatWidget user={user} />
       </main>
+
+      {/* GLOBAL CART DRAWER */}
+      {isCartOpen && (
+        <div className="fixed inset-0 z-[200] flex justify-end">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsCartOpen(false)}></div>
+          <div className="w-full sm:max-w-md bg-white h-screen shadow-2xl relative z-10 flex flex-col animate-in slide-in-from-right duration-500 overflow-hidden">
+            <div className="p-8 border-b border-slate-100 flex justify-between items-center shrink-0">
+              <h2 className="text-2xl font-black text-slate-900 tracking-tighter flex items-center gap-3">
+                <ShoppingCart className="text-blue-600" /> Your KwikCart
+              </h2>
+              <button onClick={() => setIsCartOpen(false)} className="h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 hover:text-blue-600 transition-all">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex-grow overflow-y-auto p-8 space-y-6 scrollbar-hide">
+              {cart.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-30">
+                  <ShoppingCart size={80} strokeWidth={1} />
+                  <p className="font-black uppercase tracking-widest text-xs">Your cart is empty</p>
+                </div>
+              ) : (
+                cart.map(item => (
+                  <div key={item.id} className="flex gap-4 group">
+                    <div className="h-24 w-24 rounded-2xl bg-slate-50 overflow-hidden shrink-0">
+                      <img src={item.img} className="w-full h-full object-cover" alt={item.name} />
+                    </div>
+                    <div className="flex-grow">
+                      <div className="flex justify-between items-start">
+                        <h4 className="font-black text-slate-900 text-sm">{item.name}</h4>
+                        <button onClick={() => removeFromCart(item.id)} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
+                      </div>
+                      <p className="text-blue-600 font-black text-sm mt-1">{item.priceStr || `MWK ${item.price.toLocaleString()}`}</p>
+                      <div className="flex items-center gap-3 mt-4">
+                        <button onClick={() => updateQuantity(item.id, -1)} className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center font-black text-slate-400 hover:bg-blue-600 hover:text-white transition-all">-</button>
+                        <span className="text-sm font-black w-4 text-center">{item.quantity}</span>
+                        <button onClick={() => updateQuantity(item.id, 1)} className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center font-black text-slate-400 hover:bg-blue-600 hover:text-white transition-all">+</button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            {cart.length > 0 && (
+              <div className="p-8 bg-slate-50 border-t border-slate-100 space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-bold text-slate-500">Subtotal</span>
+                  <span className="text-lg font-black text-slate-900">MWK {cartTotal.toLocaleString()}</span>
+                </div>
+                <button className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-blue-100 hover:scale-[1.02] active:scale-95 transition-all">
+                  Proceed to Payment
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
