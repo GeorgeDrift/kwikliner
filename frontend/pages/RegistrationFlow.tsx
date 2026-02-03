@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     CheckCircle, ChevronRight, ArrowLeft, ArrowRight,
-    User, Truck, FileText, Shield, Heart, DollarSign, AlertTriangle, BookOpen, Loader2, LogIn
+    Truck, FileText, Shield, Heart, DollarSign, AlertTriangle, BookOpen, Loader2, LogIn
 } from 'lucide-react';
 import { UserRole } from '../types';
 import { useToast } from '../components/ToastContext';
 import { api } from '../services/api';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import FleetOwnerRegistration from './FleetOwnerRegistration';
+import { Store, User as UserIcon } from 'lucide-react';
 
 interface DriverRegistrationProps {
     onComplete: (data: any) => void;
@@ -439,18 +441,18 @@ const DriverRegistration: React.FC<DriverRegistrationProps> = ({ onComplete, onB
                                 { k: 'agreeDriverTerms', l: 'I agree to KwikLiner Driver Terms (Indep. Contractor)' },
                                 { k: 'agreeStrictPayments', l: 'I confirm all payments will stay on-platform or face lawsuit' }
                             ].map(c => (
-                                <label key={c.k} className="flex items-start gap-3 cursor-pointer">
-                                    <input type="checkbox" className="mt-1 h-5 w-5 rounded-md accent-blue-600 bg-white dark:bg-slate-900 shrink-0" checked={(formData as any)[c.k]} onChange={e => handleChange(c.k, e.target.checked)} />
-                                    <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{c.l}</span>
+                                <label key={c.k} className="flex items-start gap-3 cursor-pointer p-2 hover:bg-white dark:hover:bg-slate-700 rounded-xl transition-all">
+                                    <input type="checkbox" className="mt-1 h-5 w-5 rounded-md accent-blue-600 shrink-0" checked={(formData as any)[c.k]} onChange={e => handleChange(c.k, e.target.checked)} />
+                                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-tight">{c.l}</span>
                                 </label>
                             ))}
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase ml-1">Digital Signature</label>
+                            <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase ml-2 tracking-widest">Digital Signature</label>
                             <input
-                                placeholder="Type Full Name as Signature"
-                                className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full focus:ring-2 focus:ring-blue-600 outline-none text-slate-900 dark:text-white"
+                                placeholder="Type Full Legal Name"
+                                className="p-5 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-black w-full focus:ring-2 focus:ring-blue-600 outline-none text-slate-900 dark:text-white placeholder:font-bold text-center uppercase tracking-widest"
                                 value={formData.signature}
                                 onChange={e => handleChange('signature', e.target.value)}
                             />
@@ -459,9 +461,9 @@ const DriverRegistration: React.FC<DriverRegistrationProps> = ({ onComplete, onB
                         <button
                             onClick={handleSubmit}
                             disabled={!formData.infoAccurate || !formData.agreeTerms || !formData.signature || isLoading}
-                            className="w-full py-5 bg-slate-900 dark:bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-slate-200 dark:shadow-none hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            className="w-full py-6 bg-slate-900 dark:bg-blue-600 text-white rounded-[32px] font-black uppercase tracking-[0.2em] text-sm shadow-2xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
                         >
-                            {isLoading ? <Loader2 className="animate-spin" size={20} /> : 'Submit Application'}
+                            {isLoading ? <Loader2 className="animate-spin mx-auto" size={24} /> : 'Submit Application'}
                         </button>
                     </div>
                 );
@@ -470,18 +472,243 @@ const DriverRegistration: React.FC<DriverRegistrationProps> = ({ onComplete, onB
     };
 
     return (
-        <div className="flex-grow w-full max-w-xl mx-auto py-10">
+        <div className="flex-grow w-full max-w-xl mx-auto py-10 px-4">
             <div className="mb-8 flex items-center justify-between">
-                <button onClick={page === 1 ? onBack : handlePrev} className="flex items-center text-slate-400 dark:text-slate-500 font-bold hover:text-slate-900 dark:hover:text-white transition-colors">
+                <button onClick={page === 1 ? onBack : handlePrev} className="flex items-center text-slate-400 dark:text-slate-500 font-bold hover:text-slate-900 dark:hover:text-white transition-colors uppercase text-[10px] tracking-widest">
                     <ArrowLeft size={16} className="mr-2" /> Back
                 </button>
                 {page < 8 && (
-                    <button onClick={handleNext} className="flex items-center text-blue-600 dark:text-blue-400 font-bold hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
+                    <button
+                        onClick={() => {
+                            if (page === 1) {
+                                if (!formData.fullName || !formData.phone || !formData.password) {
+                                    addToast('Please fill in all required fields.', 'error');
+                                    return;
+                                }
+                                if (Object.values(errors).some(e => e)) {
+                                    addToast('Please fix validation errors.', 'error');
+                                    return;
+                                }
+                            }
+                            handleNext();
+                        }}
+                        className="flex items-center text-blue-600 dark:text-blue-400 font-bold hover:text-blue-700 dark:hover:text-blue-300 transition-colors uppercase text-[10px] tracking-widest"
+                    >
                         Next <ArrowRight size={16} className="ml-2" />
                     </button>
                 )}
             </div>
             {renderPage()}
+        </div>
+    );
+};
+
+// SHIPPER REGISTRATION
+const ShipperRegistration: React.FC<DriverRegistrationProps> = ({ onComplete, onBack, isLoading }) => {
+    const [formData, setFormData] = useState({ fullName: '', phone: '', email: '', password: '', companyName: '', agreeTerms: false });
+    const handleSubmit = () => onComplete({ role: UserRole.SHIPPER, name: formData.fullName, email: formData.email, phone: formData.phone, password: formData.password, companyName: formData.companyName, isVerified: true });
+
+    return (
+        <div className="space-y-6 animate-in fade-in slide-in-from-right-8 max-w-md mx-auto py-10 px-4">
+            <div className="text-center mb-10">
+                <div className="h-20 w-20 bg-blue-600 rounded-[28px] flex items-center justify-center text-white mx-auto mb-6 shadow-2xl">
+                    <UserIcon size={40} />
+                </div>
+                <h2 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">Shipper Account</h2>
+                <p className="text-slate-500 font-bold mt-2 text-xs uppercase tracking-widest">Start moving goods now</p>
+            </div>
+            <div className="space-y-4">
+                <input placeholder="Full Name" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full" value={formData.fullName} onChange={e => setFormData({ ...formData, fullName: e.target.value })} />
+                <input placeholder="Company (Optional)" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full" value={formData.companyName} onChange={e => setFormData({ ...formData, companyName: e.target.value })} />
+                <input placeholder="Phone" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
+                <input placeholder="Email" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
+                <input type="password" placeholder="Password" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
+                <label className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-3xl cursor-pointer">
+                    <input type="checkbox" className="h-5 w-5 rounded-md accent-blue-600" checked={formData.agreeTerms} onChange={e => setFormData({ ...formData, agreeTerms: e.target.checked })} />
+                    <span className="text-[10px] font-black uppercase text-slate-500">I Agree to KwikLiner Terms</span>
+                </label>
+            </div>
+            <button onClick={handleSubmit} disabled={!formData.fullName || !formData.phone || !formData.password || !formData.agreeTerms || isLoading} className="w-full py-5 bg-blue-600 text-white rounded-[32px] font-black uppercase tracking-[0.2em] text-sm shadow-xl hover:scale-[1.02] transition-all disabled:opacity-50">
+                {isLoading ? <Loader2 className="animate-spin mx-auto" /> : 'Create Account'}
+            </button>
+            <button onClick={onBack} className="w-full py-3 text-slate-400 font-bold text-[10px] uppercase tracking-widest">Change Role</button>
+        </div>
+    );
+};
+
+// HARDWARE OWNER REGISTRATION
+const HardwareOwnerRegistration: React.FC<DriverRegistrationProps> = ({ onComplete, onBack, isLoading }) => {
+    const { addToast } = useToast();
+    const [page, setPage] = useState(1);
+    const [formData, setFormData] = useState({
+        fullName: '', phone: '', email: '', password: '',
+        storeName: '', location: '', businessType: '',
+        hasLicense: false, hasTaxClearance: false,
+        agreeTerms: false
+    });
+
+    const handleNext = () => setPage(p => p + 1);
+    const handlePrev = () => setPage(p => p - 1);
+
+    const handleSubmit = () => {
+        onComplete({
+            role: UserRole.HARDWARE_OWNER,
+            name: formData.fullName,
+            email: formData.email,
+            phone: formData.phone,
+            password: formData.password,
+            companyName: formData.storeName,
+            isVerified: true
+        });
+    };
+
+    const renderPage = () => {
+        switch (page) {
+            case 1: // Store Info
+                return (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-right-8">
+                        <div className="text-center mb-8">
+                            <h2 className="text-3xl font-black text-slate-900 dark:text-white">Store Setup</h2>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wide">Step 1 of 3</p>
+                        </div>
+                        <div className="space-y-4">
+                            <input placeholder="Owner Full Name" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.fullName} onChange={e => setFormData({ ...formData, fullName: e.target.value })} />
+                            <input placeholder="Store / Business Name" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.storeName} onChange={e => setFormData({ ...formData, storeName: e.target.value })} />
+                            <div className="grid grid-cols-2 gap-4">
+                                <input placeholder="Location / City" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.location} onChange={e => setFormData({ ...formData, location: e.target.value })} />
+                                <input placeholder="Phone" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
+                            </div>
+                            <input placeholder="Business Email" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
+                            <input type="password" placeholder="Create Password" className="p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold w-full text-slate-900 dark:text-white outline-none" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
+                        </div>
+                        <button
+                            onClick={() => {
+                                if (!formData.fullName || !formData.storeName || !formData.phone || !formData.email || !formData.password) {
+                                    addToast('Please fill in all required fields.', 'error');
+                                    return;
+                                }
+                                handleNext();
+                            }}
+                            className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl hover:scale-[1.02] transition-all"
+                        >
+                            Continue
+                        </button>
+                    </div>
+                );
+            case 2: // Documents
+                return (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-right-8">
+                        <div className="text-center mb-8">
+                            <h2 className="text-3xl font-black text-slate-900 dark:text-white">Documents</h2>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wide">Step 2 of 3</p>
+                        </div>
+                        <div className="space-y-4">
+                            {['Business Registration', 'Tax Clearance Certificate', 'Proof of Premises'].map((doc, i) => (
+                                <div key={i} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl">
+                                    <div className="flex items-center gap-3">
+                                        <FileText className="text-slate-400" size={20} />
+                                        <span className="font-bold text-slate-700 dark:text-slate-300 text-sm">{doc}</span>
+                                    </div>
+                                    <button className="px-4 py-2 bg-white dark:bg-slate-900 text-amber-600 dark:text-amber-500 text-[10px] font-black uppercase tracking-widest rounded-lg border border-amber-100 dark:border-slate-700 hover:bg-amber-50 dark:hover:bg-slate-800 transition-colors">Upload</button>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800 flex gap-3">
+                            <Briefcase size={20} className="text-blue-600 shrink-0" />
+                            <p className="text-xs font-medium text-blue-800 dark:text-blue-200">Verified businesses get higher visibility and customer trust scores on the Marketplace.</p>
+                        </div>
+                        <button onClick={handleNext} className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl hover:scale-[1.02] transition-all">
+                            Continue
+                        </button>
+                    </div>
+                );
+            case 3: // Final Review
+                return (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-right-8">
+                        <div className="text-center mb-8">
+                            <h2 className="text-3xl font-black text-slate-900 dark:text-white">Review & Submit</h2>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wide">Step 3 of 3</p>
+                        </div>
+
+                        <div className="bg-slate-50 dark:bg-slate-800 p-6 rounded-3xl border border-slate-100 dark:border-slate-700 space-y-4">
+                            <h4 className="font-black text-slate-900 dark:text-white uppercase text-xs tracking-widest mb-2">Terms of Service</h4>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                By registering as a Hardware Partner, you agree to maintain accurate inventory listings and honor all confirmed product reservations.
+                            </p>
+                            <label className="flex items-center gap-3 cursor-pointer pt-4 border-t border-slate-200 dark:border-slate-700">
+                                <input type="checkbox" className="h-5 w-5 rounded-md accent-amber-600" checked={formData.agreeTerms} onChange={e => setFormData({ ...formData, agreeTerms: e.target.checked })} />
+                                <span className="text-sm font-bold text-slate-900 dark:text-white">I Agree to KwikLiner Partner Terms</span>
+                            </label>
+                        </div>
+
+                        <button
+                            onClick={handleSubmit}
+                            disabled={!formData.agreeTerms || isLoading}
+                            className="w-full py-6 bg-slate-900 dark:bg-amber-600 text-white rounded-[32px] font-black uppercase tracking-[0.2em] text-sm shadow-2xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+                        >
+                            {isLoading ? <Loader2 className="animate-spin mx-auto" /> : 'Complete Setup'}
+                        </button>
+                    </div>
+                );
+            default: return null;
+        }
+    };
+
+    return (
+        <div className="flex-grow w-full max-w-xl mx-auto py-10 px-4">
+            <div className="mb-8 flex items-center justify-between">
+                <button onClick={page === 1 ? onBack : handlePrev} className="flex items-center text-slate-400 dark:text-slate-500 font-bold hover:text-slate-900 dark:hover:text-white transition-colors uppercase text-[10px] tracking-widest">
+                    <ArrowLeft size={16} className="mr-2" /> Back
+                </button>
+                {page < 3 && (
+                    <button
+                        onClick={() => {
+                            if (page === 1 && (!formData.fullName || !formData.storeName || !formData.phone || !formData.email || !formData.password)) {
+                                addToast('Please fill in all required fields.', 'error');
+                                return;
+                            }
+                            handleNext();
+                        }}
+                        className="flex items-center text-blue-600 dark:text-blue-400 font-bold hover:text-blue-700 dark:hover:text-blue-300 transition-colors uppercase text-[10px] tracking-widest"
+                    >
+                        Next <ArrowRight size={16} className="ml-2" />
+                    </button>
+                )}
+            </div>
+            {renderPage()}
+        </div>
+    );
+};
+
+// ROLE SELECTION COMPONENT
+const RoleSelection: React.FC<{ onSelect: (role: string) => void }> = ({ onSelect }) => {
+    const roles = [
+        { id: 'SHIPPER', title: 'Shipper', icon: <UserIcon size={32} />, color: 'bg-blue-600', desc: 'Hire drivers to move goods for you.' },
+        { id: 'DRIVER', title: 'Driver', icon: <Truck size={32} />, color: 'bg-emerald-600', desc: 'Earn by carrying loads.' },
+        { id: 'LOGISTICS_OWNER', title: 'Fleet Owner', icon: <Briefcase size={32} />, color: 'bg-indigo-600', desc: 'Manage your logistics business.' },
+        { id: 'HARDWARE_OWNER', title: 'Hardware Owner', icon: <Store size={32} />, color: 'bg-amber-600', desc: 'Sell spares and rent tools.' },
+    ];
+
+    return (
+        <div className="max-w-7xl mx-auto py-20 px-6 text-center animate-in fade-in slide-in-from-bottom-8 duration-700">
+            <div className="mb-20">
+                <h2 className="text-6xl font-black text-slate-900 dark:text-white tracking-tighter mb-4">Choose your journey</h2>
+                <p className="text-xl text-slate-500 font-medium tracking-tight">Select how you want to build on the KwikLiner network.</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                {roles.map((role) => (
+                    <button key={role.id} onClick={() => onSelect(role.id)} className="group bg-white dark:bg-slate-800 p-10 rounded-[50px] shadow-sm hover:shadow-2xl transition-all border border-slate-100 dark:border-slate-700 hover:border-blue-500 hover:-translate-y-2 flex flex-col items-center">
+                        <div className={`h-24 w-24 ${role.color} rounded-[40px] flex items-center justify-center text-white mb-8 group-hover:scale-110 transition-transform shadow-xl`}>
+                            {role.icon}
+                        </div>
+                        <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2 tracking-tight">{role.title}</h3>
+                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400 leading-relaxed mb-6">{role.desc}</p>
+                        <div className="mt-auto flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 opacity-0 group-hover:opacity-100 transition-all">
+                            Select Role <ArrowRight size={14} />
+                        </div>
+                    </button>
+                ))}
+            </div>
         </div>
     );
 };
@@ -600,35 +827,74 @@ interface RegistrationFlowProps {
 }
 
 const RegistrationFlow: React.FC<RegistrationFlowProps> = ({ onRegister, defaultMode = 'register' }) => {
-    const [mode, setMode] = useState<'login' | 'register'>(defaultMode);
+    const [mode, setMode] = useState<'login' | 'select' | 'reg-shipper' | 'reg-driver' | 'reg-fleet' | 'reg-hardware'>(
+        defaultMode === 'login' ? 'login' : 'select'
+    );
+    const [isLoading, setIsLoading] = useState(false);
+    const { addToast } = useToast();
     const navigate = useNavigate();
+    const location = useLocation();
+
+    useEffect(() => {
+        const state = location.state as { role?: UserRole };
+        if (state?.role) {
+            if (state.role === UserRole.SHIPPER) setMode('reg-shipper');
+            else if (state.role === UserRole.DRIVER) setMode('reg-driver');
+            else if (state.role === UserRole.LOGISTICS_OWNER) setMode('reg-fleet');
+            else if (state.role === UserRole.HARDWARE_OWNER) setMode('reg-hardware');
+        }
+    }, [location.state]);
+
+    const handleRegistrationComplete = async (userData: any) => {
+        setIsLoading(true);
+        try {
+            const res = await fetch('http://localhost:5000/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(userData)
+            });
+            const data = await res.json();
+            if (data.token) {
+                localStorage.setItem('token', data.token);
+                onRegister(data.user);
+                addToast("Account created successfully!", "success");
+                navigate('/dashboard');
+            } else {
+                addToast(data.error || "Registration failed", "error");
+            }
+        } catch (err) {
+            addToast("Network error during registration", "error");
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     if (mode === 'login') {
         return (
             <LoginForm
-                onRegisterClick={() => setMode('register')}
+                onRegisterClick={() => setMode('select')}
                 onRegister={onRegister}
             />
         );
     }
 
     return (
-        <div className="flex flex-col min-h-[calc(100vh-200px)]">
+        <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors">
             <div className="flex-grow">
-                <DriverRegistration
-                    onComplete={onRegister}
-                    onBack={() => navigate('/')}
-                />
+                {mode === 'select' && <RoleSelection onSelect={(role) => {
+                    if (role === 'SHIPPER') setMode('reg-shipper');
+                    else if (role === 'DRIVER') setMode('reg-driver');
+                    else if (role === 'LOGISTICS_OWNER') setMode('reg-fleet');
+                    else setMode('reg-hardware');
+                }} />}
+                {mode === 'reg-shipper' && <ShipperRegistration onComplete={handleRegistrationComplete} onBack={() => setMode('select')} isLoading={isLoading} />}
+                {mode === 'reg-driver' && <DriverRegistration onComplete={handleRegistrationComplete} onBack={() => setMode('select')} isLoading={isLoading} />}
+                {mode === 'reg-fleet' && <FleetOwnerRegistration onComplete={handleRegistrationComplete} onBack={() => setMode('select')} isLoading={isLoading} />}
+                {mode === 'reg-hardware' && <HardwareOwnerRegistration onComplete={handleRegistrationComplete} onBack={() => setMode('select')} isLoading={isLoading} />}
             </div>
-            <div className="text-center pb-8 pt-4">
-                <p className="text-slate-600 dark:text-slate-400 text-sm font-medium">
-                    Already have an account?{' '}
-                    <button
-                        onClick={() => setMode('login')}
-                        className="text-blue-600 dark:text-blue-400 font-black hover:underline"
-                    >
-                        Sign In
-                    </button>
+            <div className="text-center py-12">
+                <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px]">
+                    Already have an account? <button onClick={() => setMode('login')} className="text-blue-600 font-black hover:underline ml-2">Sign In</button>
                 </p>
             </div>
         </div>
